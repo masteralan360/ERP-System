@@ -18,6 +18,8 @@ import {
 import { useState } from 'react'
 import { Button } from './button'
 import { useTranslation } from 'react-i18next'
+import { useEffect } from 'react'
+import { supabase } from '@/auth/supabase'
 
 interface LayoutProps {
     children: ReactNode
@@ -27,8 +29,26 @@ export function Layout({ children }: LayoutProps) {
     const [location] = useLocation()
     const { user, signOut } = useAuth()
     const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [members, setMembers] = useState<{ id: string, name: string, role: string }[]>([])
     const { t } = useTranslation()
     const [logoError, setLogoError] = useState(false)
+
+    useEffect(() => {
+        if (!user?.workspaceId) return
+
+        const fetchMembers = async () => {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, name, role')
+                .eq('workspace_id', user.workspaceId)
+
+            if (!error && data) {
+                setMembers(data)
+            }
+        }
+
+        fetchMembers()
+    }, [user?.workspaceId])
 
     const navigation = [
         { name: t('nav.dashboard'), href: '/', icon: LayoutDashboard },
@@ -114,6 +134,26 @@ export function Layout({ children }: LayoutProps) {
                         )
                     })}
                 </nav>
+
+                {/* Workspace Members */}
+                <div className="mt-8 px-6">
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                        {t('auth.members') || 'Workspace Members'}
+                    </h2>
+                    <div className="space-y-3">
+                        {members.map((member) => (
+                            <div key={member.id} className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs font-medium">
+                                    {member.name?.charAt(0).toUpperCase() || 'M'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{member.name}</p>
+                                    <p className="text-[10px] text-muted-foreground capitalize">{member.role}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
 
                 {/* User info */}
                 <div className="p-4 border-t border-border">

@@ -9,7 +9,8 @@ import {
     Customers,
     Orders,
     Invoices,
-    Settings
+    Settings,
+    Admin
 } from '@/ui/pages'
 
 function App() {
@@ -70,6 +71,9 @@ function App() {
                             <Settings />
                         </Layout>
                     </ProtectedRoute>
+                </Route>
+                <Route path="/admin">
+                    <Admin />
                 </Route>
 
                 {/* 404 */}

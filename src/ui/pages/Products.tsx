@@ -34,7 +34,7 @@ import { useAuth } from '@/auth'
 const CATEGORIES = ['Electronics', 'Clothing', 'Food', 'Furniture', 'Other']
 const UNITS = ['pcs', 'kg', 'liter', 'box', 'pack']
 
-type ProductFormData = Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted'>
+type ProductFormData = Omit<Product, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted'>
 
 const initialFormData: ProductFormData = {
     sku: '',
@@ -50,11 +50,12 @@ const initialFormData: ProductFormData = {
 }
 
 export function Products() {
-    const products = useProducts()
-    const { t } = useTranslation()
     const { user } = useAuth()
+    const products = useProducts(user?.workspaceId)
+    const { t } = useTranslation()
     const canEdit = user?.role === 'admin' || user?.role === 'staff'
     const canDelete = user?.role === 'admin'
+    const workspaceId = user?.workspaceId || ''
     const [search, setSearch] = useState('')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -98,7 +99,7 @@ export function Products() {
             if (editingProduct) {
                 await updateProduct(editingProduct.id, formData)
             } else {
-                await createProduct(formData)
+                await createProduct(workspaceId, formData)
             }
             setIsDialogOpen(false)
             setFormData(initialFormData)

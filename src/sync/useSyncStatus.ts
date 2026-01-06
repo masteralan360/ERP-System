@@ -51,7 +51,7 @@ export function useSyncStatus(): UseSyncStatusResult {
         setSyncState('syncing')
 
         try {
-            const result = await fullSync(user.id, lastSyncTime)
+            const result = await fullSync(user.id, user.workspaceId, lastSyncTime)
 
             const now = new Date().toISOString()
             setLastSyncTime(now)

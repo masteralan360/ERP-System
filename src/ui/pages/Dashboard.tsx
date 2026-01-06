@@ -4,10 +4,14 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Package, Users, ShoppingCart, FileText, TrendingUp, AlertTriangle } from 'lucide-react'
 import { Link } from 'wouter'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/auth'
 
 export function Dashboard() {
-    const stats = useDashboardStats()
+    const { user } = useAuth()
+    const stats = useDashboardStats(user?.workspaceId)
     const { t } = useTranslation()
+
+    if (!stats) return null
 
     const statCards = [
         {

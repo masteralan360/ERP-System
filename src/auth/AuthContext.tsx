@@ -8,6 +8,8 @@ interface AuthUser {
     email: string
     name: string
     role: UserRole
+    workspaceId: string
+    workspaceName?: string
     avatarUrl?: string
 }
 
@@ -18,7 +20,15 @@ interface AuthContextType {
     isAuthenticated: boolean
     isSupabaseConfigured: boolean
     signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-    signUp: (email: string, password: string, name: string, role?: UserRole, passkey?: string) => Promise<{ error: Error | null }>
+    signUp: (params: {
+        email: string;
+        password: string;
+        name: string;
+        role: UserRole;
+        passkey: string;
+        workspaceName?: string;
+        workspaceCode?: string;
+    }) => Promise<{ error: Error | null }>
     signOut: () => Promise<void>
     hasRole: (roles: UserRole[]) => boolean
 }
@@ -31,6 +41,8 @@ const DEMO_USER: AuthUser = {
     email: 'demo@erp-system.local',
     name: 'Demo User',
     role: 'admin',
+    workspaceId: 'demo-workspace',
+    workspaceName: 'Demo Workspace',
     avatarUrl: undefined
 }
 
@@ -40,6 +52,8 @@ function parseUserFromSupabase(user: User): AuthUser {
         email: user.email ?? '',
         name: user.user_metadata?.name ?? user.email?.split('@')[0] ?? 'User',
         role: (user.user_metadata?.role as UserRole) ?? 'viewer',
+        workspaceId: user.user_metadata?.workspace_id ?? '',
+        workspaceName: user.user_metadata?.workspace_name,
         avatarUrl: user.user_metadata?.avatar_url
     }
 }
@@ -88,24 +102,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error as Error | null }
     }
 
-    const signUp = async (email: string, password: string, name: string, role: UserRole = 'viewer', passkey?: string) => {
+    const signUp = async ({ email, password, name, role = 'viewer', passkey, workspaceName, workspaceCode }: {
+        email: string;
+        password: string;
+        name: string;
+        role: UserRole;
+        passkey: string;
+        workspaceName?: string;
+        workspaceCode?: string;
+    }) => {
         if (!isSupabaseConfigured) {
-            setUser({ ...DEMO_USER, email, name, role })
+            setUser({ ...DEMO_USER, email, name, role, workspaceName: workspaceName || 'Local Workspace' })
             return { error: null }
         }
 
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    name,
-                    role,
-                    passkey // This will be checked by the database trigger
-                }
+        let workspaceId = ''
+        let resolvedWorkspaceName = workspaceName
+
+        try {
+            if (role === 'admin') {
+                if (!workspaceName) throw new Error('Workspace name is required for Admins')
+
+                // Create workspace via RPC
+                const { data: wsData, error: wsError } = await supabase.rpc('create_workspace', { w_name: workspaceName })
+                if (wsError) throw wsError
+
+                workspaceId = wsData.id
+                resolvedWorkspaceName = wsData.name // Should be same as workspaceName
+            } else {
+                if (!workspaceCode) throw new Error('Workspace code is required to join')
+
+                // Find workspace by code
+                const { data: wsData, error: wsError } = await supabase
+                    .from('workspaces')
+                    .select('id, name')
+                    .eq('code', workspaceCode.toUpperCase())
+                    .single()
+
+                if (wsError || !wsData) throw new Error('Invalid workspace code')
+
+                workspaceId = wsData.id
+                resolvedWorkspaceName = wsData.name
             }
-        })
-        return { error: error as Error | null }
+
+            const { error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        name,
+                        role,
+                        passkey,
+                        workspace_id: workspaceId,
+                        workspace_name: resolvedWorkspaceName
+                    }
+                }
+            })
+            return { error: error as Error | null }
+        } catch (err: any) {
+            return { error: err as Error }
+        }
     }
 
     const signOut = async () => {

@@ -42,16 +42,17 @@ const statusColors: Record<OrderStatus, string> = {
 }
 
 export function Orders() {
-    const orders = useOrders()
-    const customers = useCustomers()
-    const products = useProducts()
-    const { t } = useTranslation()
     const { user } = useAuth()
+    const orders = useOrders(user?.workspaceId)
+    const customers = useCustomers(user?.workspaceId)
+    const products = useProducts(user?.workspaceId)
+    const { t } = useTranslation()
     const canEdit = user?.role === 'admin' || user?.role === 'staff'
     const [search, setSearch] = useState('')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingOrder, setEditingOrder] = useState<Order | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const workspaceId = user?.workspaceId || ''
 
     // Form state
     const [customerId, setCustomerId] = useState('')
@@ -153,7 +154,7 @@ export function Orders() {
             if (editingOrder) {
                 await updateOrder(editingOrder.id, orderData)
             } else {
-                await createOrder(orderData)
+                await createOrder(workspaceId, orderData)
             }
             setIsDialogOpen(false)
         } catch (error) {

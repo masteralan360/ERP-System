@@ -7,10 +7,10 @@ import { generateId } from '@/lib/utils'
 // PRODUCTS HOOKS
 // ===================
 
-export function useProducts() {
+export function useProducts(workspaceId: string | undefined) {
     const products = useLiveQuery(
-        () => db.products.filter(p => !p.isDeleted).toArray(),
-        []
+        () => workspaceId ? db.products.where('workspaceId').equals(workspaceId).and(p => !p.isDeleted).toArray() : [],
+        [workspaceId]
     )
     return products ?? []
 }
@@ -23,11 +23,12 @@ export function useProduct(id: string | undefined) {
     return product
 }
 
-export async function createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted'>): Promise<Product> {
+export async function createProduct(workspaceId: string, data: Omit<Product, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted'>): Promise<Product> {
     const now = new Date().toISOString()
     const product: Product = {
         ...data,
         id: generateId(),
+        workspaceId,
         createdAt: now,
         updatedAt: now,
         syncStatus: 'pending',
@@ -77,10 +78,10 @@ export async function deleteProduct(id: string): Promise<void> {
 // CUSTOMERS HOOKS
 // ===================
 
-export function useCustomers() {
+export function useCustomers(workspaceId: string | undefined) {
     const customers = useLiveQuery(
-        () => db.customers.filter(c => !c.isDeleted).toArray(),
-        []
+        () => workspaceId ? db.customers.where('workspaceId').equals(workspaceId).and(c => !c.isDeleted).toArray() : [],
+        [workspaceId]
     )
     return customers ?? []
 }
@@ -93,11 +94,12 @@ export function useCustomer(id: string | undefined) {
     return customer
 }
 
-export async function createCustomer(data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'totalOrders' | 'totalSpent'>): Promise<Customer> {
+export async function createCustomer(workspaceId: string, data: Omit<Customer, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'totalOrders' | 'totalSpent'>): Promise<Customer> {
     const now = new Date().toISOString()
     const customer: Customer = {
         ...data,
         id: generateId(),
+        workspaceId,
         createdAt: now,
         updatedAt: now,
         syncStatus: 'pending',
@@ -149,10 +151,10 @@ export async function deleteCustomer(id: string): Promise<void> {
 // ORDERS HOOKS
 // ===================
 
-export function useOrders() {
+export function useOrders(workspaceId: string | undefined) {
     const orders = useLiveQuery(
-        () => db.orders.filter(o => !o.isDeleted).toArray(),
-        []
+        () => workspaceId ? db.orders.where('workspaceId').equals(workspaceId).and(o => !o.isDeleted).toArray() : [],
+        [workspaceId]
     )
     return orders ?? []
 }
@@ -165,13 +167,14 @@ export function useOrder(id: string | undefined) {
     return order
 }
 
-export async function createOrder(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'orderNumber'>): Promise<Order> {
+export async function createOrder(workspaceId: string, data: Omit<Order, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'orderNumber'>): Promise<Order> {
     const now = new Date().toISOString()
     const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`
 
     const order: Order = {
         ...data,
         id: generateId(),
+        workspaceId,
         orderNumber,
         createdAt: now,
         updatedAt: now,
@@ -231,10 +234,10 @@ export async function deleteOrder(id: string): Promise<void> {
 // INVOICES HOOKS
 // ===================
 
-export function useInvoices() {
+export function useInvoices(workspaceId: string | undefined) {
     const invoices = useLiveQuery(
-        () => db.invoices.filter(i => !i.isDeleted).toArray(),
-        []
+        () => workspaceId ? db.invoices.where('workspaceId').equals(workspaceId).and(i => !i.isDeleted).toArray() : [],
+        [workspaceId]
     )
     return invoices ?? []
 }
@@ -247,13 +250,14 @@ export function useInvoice(id: string | undefined) {
     return invoice
 }
 
-export async function createInvoice(data: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'invoiceNumber'>): Promise<Invoice> {
+export async function createInvoice(workspaceId: string, data: Omit<Invoice, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'invoiceNumber'>): Promise<Invoice> {
     const now = new Date().toISOString()
     const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`
 
     const invoice: Invoice = {
         ...data,
         id: generateId(),
+        workspaceId,
         invoiceNumber,
         createdAt: now,
         updatedAt: now,
@@ -359,8 +363,9 @@ export async function clearSyncQueue(): Promise<void> {
 // DASHBOARD STATS
 // ===================
 
-export function useDashboardStats() {
+export function useDashboardStats(workspaceId: string | undefined) {
     const stats = useLiveQuery(async () => {
+        if (!workspaceId) return null
         const [
             productCount,
             customerCount,
@@ -370,16 +375,16 @@ export function useDashboardStats() {
             pendingInvoices,
             lowStockProducts
         ] = await Promise.all([
-            db.products.filter(p => !p.isDeleted).count(),
-            db.customers.filter(c => !c.isDeleted).count(),
-            db.orders.filter(o => !o.isDeleted).count(),
-            db.invoices.filter(i => !i.isDeleted).count(),
-            db.orders.filter(o => !o.isDeleted).reverse().sortBy('createdAt').then(orders => orders.slice(0, 5)),
-            db.invoices.filter(inv => !inv.isDeleted && (inv.status === 'sent' || inv.status === 'overdue')).toArray(),
-            db.products.filter(p => !p.isDeleted && p.quantity <= p.minStockLevel).toArray()
+            db.products.where('workspaceId').equals(workspaceId).and(p => !p.isDeleted).count(),
+            db.customers.where('workspaceId').equals(workspaceId).and(c => !c.isDeleted).count(),
+            db.orders.where('workspaceId').equals(workspaceId).and(o => !o.isDeleted).count(),
+            db.invoices.where('workspaceId').equals(workspaceId).and(i => !i.isDeleted).count(),
+            db.orders.where('workspaceId').equals(workspaceId).and(o => !o.isDeleted).reverse().sortBy('createdAt').then(orders => orders.slice(0, 5)),
+            db.invoices.where('workspaceId').equals(workspaceId).and(inv => !inv.isDeleted && (inv.status === 'sent' || inv.status === 'overdue')).toArray(),
+            db.products.where('workspaceId').equals(workspaceId).and(p => !p.isDeleted && p.quantity <= p.minStockLevel).toArray()
         ])
 
-        const totalRevenue = (await db.invoices.filter(inv => !inv.isDeleted && inv.status === 'paid').toArray())
+        const totalRevenue = (await db.invoices.where('workspaceId').equals(workspaceId).and(inv => !inv.isDeleted && inv.status === 'paid').toArray())
             .reduce((sum, inv) => sum + inv.total, 0)
 
         return {

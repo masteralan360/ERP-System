@@ -197,6 +197,10 @@
         "localDataInfo": "Data is stored locally first and synced when online",
         "supabaseNotConfigured": "Supabase is not configured. Using demo mode with local-only data.",
         "selectRole": "Select a role",
+        "role": "Role",
+        "workspaceName": "Workspace Name",
+        "workspaceCode": "Workspace Code",
+        "members": "Workspace Members",
         "roles": {
             "admin": "Admin",
             "staff": "Staff",

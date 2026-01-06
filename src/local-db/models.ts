@@ -14,6 +14,7 @@ export interface SyncMetadata {
 
 export interface BaseEntity extends SyncMetadata {
     id: string
+    workspaceId: string
     createdAt: string
     updatedAt: string
 }

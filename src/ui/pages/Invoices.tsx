@@ -42,15 +42,16 @@ const statusColors: Record<InvoiceStatus, string> = {
 }
 
 export function Invoices() {
-    const invoices = useInvoices()
-    const orders = useOrders()
-    const { t } = useTranslation()
     const { user } = useAuth()
+    const invoices = useInvoices(user?.workspaceId)
+    const orders = useOrders(user?.workspaceId)
+    const { t } = useTranslation()
     const canEdit = user?.role === 'admin' || user?.role === 'staff'
     const [search, setSearch] = useState('')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const workspaceId = user?.workspaceId || ''
 
     // Form state
     const [orderId, setOrderId] = useState('')
@@ -101,7 +102,7 @@ export function Invoices() {
                     paidAt: status === 'paid' ? new Date().toISOString() : undefined
                 })
             } else if (selectedOrder) {
-                await createInvoice({
+                await createInvoice(workspaceId, {
                     orderId: selectedOrder.id,
                     customerId: selectedOrder.customerId,
                     customerName: selectedOrder.customerName,

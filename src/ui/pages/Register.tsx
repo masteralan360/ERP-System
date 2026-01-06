@@ -15,6 +15,8 @@ export function Register() {
     const [password, setPassword] = useState('')
     const [passkey, setPasskey] = useState('')
     const [role, setRole] = useState<UserRole>('staff')
+    const [workspaceName, setWorkspaceName] = useState('')
+    const [workspaceCode, setWorkspaceCode] = useState('')
     const [error, setError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
 
@@ -24,8 +26,17 @@ export function Register() {
         setIsLoading(true)
 
         try {
-            const { error } = await signUp(email, password, name, role, passkey)
+            const { error } = await signUp({
+                email,
+                password,
+                name,
+                role,
+                passkey,
+                workspaceName: role === 'admin' ? workspaceName : undefined,
+                workspaceCode: role !== 'admin' ? workspaceCode : undefined
+            })
             if (error) {
+                // ... same error logic
                 // If it's a passkey error from the trigger, it might be genericized by Supabase
                 // or contain the custom message. We map both to our localized key.
                 if (error.message.includes('Invalid Access Code') || error.message.includes('Database error saving new user')) {
@@ -136,7 +147,7 @@ export function Register() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="role">{t('settings.role')}</Label>
+                                <Label htmlFor="role">{t('auth.role')}</Label>
                                 <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder={t('auth.selectRole')} />
@@ -148,6 +159,40 @@ export function Register() {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {role === 'admin' ? (
+                                <div className="space-y-2">
+                                    <Label htmlFor="workspaceName">{t('auth.workspaceName')}</Label>
+                                    <div className="relative">
+                                        <Boxes className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                        <Input
+                                            id="workspaceName"
+                                            type="text"
+                                            placeholder="e.g. My Awesome Corp"
+                                            value={workspaceName}
+                                            onChange={(e) => setWorkspaceName(e.target.value)}
+                                            className="pl-10"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <Label htmlFor="workspaceCode">{t('auth.workspaceCode')}</Label>
+                                    <div className="relative">
+                                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                        <Input
+                                            id="workspaceCode"
+                                            type="text"
+                                            placeholder="ABCD-1234"
+                                            value={workspaceCode}
+                                            onChange={(e) => setWorkspaceCode(e.target.value)}
+                                            className="pl-10"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
                             {error && (
                                 <p className="text-sm text-destructive">{error}</p>

@@ -26,7 +26,7 @@ import { Plus, Pencil, Trash2, Users, Search, Mail, Phone, MapPin } from 'lucide
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
 
-type CustomerFormData = Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'totalOrders' | 'totalSpent'>
+type CustomerFormData = Omit<Customer, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'totalOrders' | 'totalSpent'>
 
 const initialFormData: CustomerFormData = {
     name: '',
@@ -39,10 +39,11 @@ const initialFormData: CustomerFormData = {
 }
 
 export function Customers() {
-    const customers = useCustomers()
-    const { t } = useTranslation()
     const { user } = useAuth()
+    const customers = useCustomers(user?.workspaceId)
+    const { t } = useTranslation()
     const canEdit = user?.role === 'admin' || user?.role === 'staff'
+    const workspaceId = user?.workspaceId || ''
     const [search, setSearch] = useState('')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
@@ -83,7 +84,7 @@ export function Customers() {
             if (editingCustomer) {
                 await updateCustomer(editingCustomer.id, formData)
             } else {
-                await createCustomer(formData)
+                await createCustomer(workspaceId, formData)
             }
             setIsDialogOpen(false)
             setFormData(initialFormData)

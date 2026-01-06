@@ -56,11 +56,12 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number = 10000): Prom
 }
 
 // Push a single item to Supabase
-async function pushItem(item: SyncQueueItem, userId: string): Promise<boolean> {
+async function pushItem(item: SyncQueueItem, userId: string, workspaceId: string): Promise<boolean> {
     console.log(`[Sync] Pushing ${item.entityType} ${item.operation} (${item.entityId})`)
     const tableName = getTableName(item.entityType)
     const data = toSnakeCase(item.data) as Record<string, unknown>
     data.user_id = userId
+    data.workspace_id = workspaceId
 
     // Remove local-only metadata that shouldn't be synced to server
     delete data.sync_status
@@ -108,7 +109,7 @@ async function pushItem(item: SyncQueueItem, userId: string): Promise<boolean> {
 }
 
 // Push all pending changes to Supabase
-export async function pushChanges(userId: string): Promise<{ success: number; failed: number }> {
+export async function pushChanges(userId: string, workspaceId: string): Promise<{ success: number; failed: number }> {
     if (!isSupabaseConfigured) {
         return { success: 0, failed: 0 }
     }
@@ -124,7 +125,7 @@ export async function pushChanges(userId: string): Promise<{ success: number; fa
             continue
         }
 
-        const pushed = await pushItem(item, userId)
+        const pushed = await pushItem(item, userId, workspaceId)
         if (pushed) {
             await removeFromQueue(item.id)
 
@@ -146,7 +147,7 @@ export async function pushChanges(userId: string): Promise<{ success: number; fa
 }
 
 // Pull changes from Supabase
-export async function pullChanges(userId: string, lastSyncTime: string | null): Promise<{ pulled: number }> {
+export async function pullChanges(workspaceId: string, lastSyncTime: string | null): Promise<{ pulled: number }> {
     if (!isSupabaseConfigured) {
         console.log('[Sync] Supabase not configured, skipping pull')
         return { pulled: 0 }
@@ -163,7 +164,7 @@ export async function pullChanges(userId: string, lastSyncTime: string | null): 
             supabase
                 .from('products')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('workspace_id', workspaceId)
                 .gt('updated_at', since)
         )
 
@@ -192,7 +193,7 @@ export async function pullChanges(userId: string, lastSyncTime: string | null): 
             supabase
                 .from('customers')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('workspace_id', workspaceId)
                 .gt('updated_at', since)
         )
 
@@ -220,7 +221,7 @@ export async function pullChanges(userId: string, lastSyncTime: string | null): 
             supabase
                 .from('orders')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('workspace_id', workspaceId)
                 .gt('updated_at', since)
         )
 
@@ -248,7 +249,7 @@ export async function pullChanges(userId: string, lastSyncTime: string | null): 
             supabase
                 .from('invoices')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('workspace_id', workspaceId)
                 .gt('updated_at', since)
         )
 
@@ -278,17 +279,17 @@ export async function pullChanges(userId: string, lastSyncTime: string | null): 
 }
 
 // Full sync - push then pull
-export async function fullSync(userId: string, lastSyncTime: string | null): Promise<SyncResult> {
+export async function fullSync(userId: string, workspaceId: string, lastSyncTime: string | null): Promise<SyncResult> {
     const errors: string[] = []
 
     // Push first
-    const { success: pushed, failed } = await pushChanges(userId)
+    const { success: pushed, failed } = await pushChanges(userId, workspaceId)
     if (failed > 0) {
         errors.push(`Failed to push ${failed} items`)
     }
 
     // Then pull
-    const { pulled } = await pullChanges(userId, lastSyncTime)
+    const { pulled } = await pullChanges(workspaceId, lastSyncTime)
 
     return {
         success: errors.length === 0,

@@ -8,76 +8,76 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 
 -- Products Policies
-CREATE POLICY "Users can view own products"
+CREATE POLICY "Users can view workspace products"
     ON products FOR SELECT
-    USING (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can insert own products"
+CREATE POLICY "Users can insert workspace products"
     ON products FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can update own products"
+CREATE POLICY "Users can update workspace products"
     ON products FOR UPDATE
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id)
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can delete own products"
+CREATE POLICY "Users can delete workspace products"
     ON products FOR DELETE
-    USING (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
 -- Customers Policies
-CREATE POLICY "Users can view own customers"
+CREATE POLICY "Users can view workspace customers"
     ON customers FOR SELECT
-    USING (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can insert own customers"
+CREATE POLICY "Users can insert workspace customers"
     ON customers FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can update own customers"
+CREATE POLICY "Users can update workspace customers"
     ON customers FOR UPDATE
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id)
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can delete own customers"
+CREATE POLICY "Users can delete workspace customers"
     ON customers FOR DELETE
-    USING (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
 -- Orders Policies
-CREATE POLICY "Users can view own orders"
+CREATE POLICY "Users can view workspace orders"
     ON orders FOR SELECT
-    USING (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can insert own orders"
+CREATE POLICY "Users can insert workspace orders"
     ON orders FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can update own orders"
+CREATE POLICY "Users can update workspace orders"
     ON orders FOR UPDATE
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id)
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can delete own orders"
+CREATE POLICY "Users can delete workspace orders"
     ON orders FOR DELETE
-    USING (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
 -- Invoices Policies
-CREATE POLICY "Users can view own invoices"
+CREATE POLICY "Users can view workspace invoices"
     ON invoices FOR SELECT
-    USING (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can insert own invoices"
+CREATE POLICY "Users can insert workspace invoices"
     ON invoices FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can update own invoices"
+CREATE POLICY "Users can update workspace invoices"
     ON invoices FOR UPDATE
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id)
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
-CREATE POLICY "Users can delete own invoices"
+CREATE POLICY "Users can delete workspace invoices"
     ON invoices FOR DELETE
-    USING (auth.uid() = user_id);
+    USING ((auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid = workspace_id);
 
 -- Note: For multi-tenant / organization-based access,
 -- you would add an organization_id column and modify policies accordingly:
