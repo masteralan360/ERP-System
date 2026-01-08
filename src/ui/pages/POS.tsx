@@ -488,6 +488,21 @@ export function POS() {
                                 <BarcodeScanner
                                     onCapture={handleBarcodeDetected}
                                     trackConstraints={{ deviceId: selectedCameraId }}
+                                    options={{
+                                        formats: [
+                                            'code_128',
+                                            'code_39',
+                                            'code_93',
+                                            'codabar',
+                                            'ean_13',
+                                            'ean_8',
+                                            'itf',
+                                            'upc_a',
+                                            'upc_e',
+                                            'qr_code'
+                                        ],
+                                        delay: 500
+                                    }}
                                 />
                             ) : (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-muted/50">
