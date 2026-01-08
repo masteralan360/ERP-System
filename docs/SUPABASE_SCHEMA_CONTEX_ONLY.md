@@ -109,6 +109,28 @@ CREATE TABLE public.profiles (
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
   CONSTRAINT profiles_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id)
 );
+CREATE TABLE public.sales (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL,
+  cashier_id uuid NOT NULL,
+  total_amount numeric(10,2) NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  origin text DEFAULT 'pos'::text,
+  CONSTRAINT sales_pkey PRIMARY KEY (id),
+  CONSTRAINT sales_cashier_id_fkey FOREIGN KEY (cashier_id) REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT sales_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id)
+);
+CREATE TABLE public.sale_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  sale_id uuid NOT NULL,
+  product_id uuid NOT NULL,
+  quantity integer NOT NULL,
+  unit_price numeric(10,2) NOT NULL,
+  total_price numeric(10,2) NOT NULL,
+  CONSTRAINT sale_items_pkey PRIMARY KEY (id),
+  CONSTRAINT sale_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE,
+  CONSTRAINT sale_items_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES public.sales(id) ON DELETE CASCADE
+);
 CREATE TABLE public.workspaces (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,

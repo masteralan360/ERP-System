@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.sales (
 CREATE TABLE IF NOT EXISTS public.sale_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     sale_id UUID REFERENCES public.sales(id) ON DELETE CASCADE NOT NULL,
-    product_id UUID REFERENCES public.products(id) NOT NULL,
+    product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
     quantity INTEGER NOT NULL,
     unit_price NUMERIC(10, 2) NOT NULL,
     total_price NUMERIC(10, 2) NOT NULL
