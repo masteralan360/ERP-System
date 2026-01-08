@@ -1,7 +1,70 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './database'
-import type { Product, Customer, Order, Invoice, SyncQueueItem } from './models'
+import type { Product, Category, Customer, Order, Invoice, SyncQueueItem } from './models'
 import { generateId } from '@/lib/utils'
+
+// ===================
+// CATEGORIES HOOKS
+// ===================
+
+export function useCategories(workspaceId: string | undefined) {
+    const categories = useLiveQuery(
+        () => workspaceId ? db.categories.where('workspaceId').equals(workspaceId).and(c => !c.isDeleted).toArray() : [],
+        [workspaceId]
+    )
+    return categories ?? []
+}
+
+export async function createCategory(workspaceId: string, data: Omit<Category, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted'>): Promise<Category> {
+    const now = new Date().toISOString()
+    const category: Category = {
+        ...data,
+        id: generateId(),
+        workspaceId,
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: 'pending',
+        lastSyncedAt: null,
+        version: 1,
+        isDeleted: false
+    }
+
+    await db.categories.add(category)
+    await addToSyncQueue('categories', category.id, 'create', category as unknown as Record<string, unknown>)
+
+    return category
+}
+
+export async function updateCategory(id: string, data: Partial<Category>): Promise<void> {
+    const now = new Date().toISOString()
+    const existing = await db.categories.get(id)
+    if (!existing) throw new Error('Category not found')
+
+    const updated = {
+        ...existing,
+        ...data,
+        updatedAt: now,
+        syncStatus: 'pending' as const,
+        version: existing.version + 1
+    }
+
+    await db.categories.put(updated)
+    await addToSyncQueue('categories', id, 'update', updated as unknown as Record<string, unknown>)
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+    const now = new Date().toISOString()
+    const existing = await db.categories.get(id)
+    if (!existing) return
+
+    await db.categories.update(id, {
+        isDeleted: true,
+        updatedAt: now,
+        syncStatus: 'pending',
+        version: existing.version + 1
+    })
+    await addToSyncQueue('categories', id, 'delete', { id })
+}
 
 // ===================
 // PRODUCTS HOOKS
@@ -368,6 +431,7 @@ export function useDashboardStats(workspaceId: string | undefined) {
         if (!workspaceId) return null
         const [
             productCount,
+            categoryCount,
             customerCount,
             orderCount,
             invoiceCount,
@@ -376,6 +440,7 @@ export function useDashboardStats(workspaceId: string | undefined) {
             lowStockProducts
         ] = await Promise.all([
             db.products.where('workspaceId').equals(workspaceId).and(p => !p.isDeleted).count(),
+            db.categories.where('workspaceId').equals(workspaceId).and(c => !c.isDeleted).count(),
             db.customers.where('workspaceId').equals(workspaceId).and(c => !c.isDeleted).count(),
             db.orders.where('workspaceId').equals(workspaceId).and(o => !o.isDeleted).count(),
             db.invoices.where('workspaceId').equals(workspaceId).and(i => !i.isDeleted).count(),
@@ -389,6 +454,7 @@ export function useDashboardStats(workspaceId: string | undefined) {
 
         return {
             productCount,
+            categoryCount,
             customerCount,
             orderCount,
             invoiceCount,
@@ -401,6 +467,7 @@ export function useDashboardStats(workspaceId: string | undefined) {
 
     return stats ?? {
         productCount: 0,
+        categoryCount: 0,
         customerCount: 0,
         orderCount: 0,
         invoiceCount: 0,

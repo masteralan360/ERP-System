@@ -31,6 +31,7 @@
         "title": "Products",
         "subtitle": "Manage your inventory",
         "addProduct": "Add Product",
+        "addCategory": "Add Category",
         "searchPlaceholder": "Search products...",
         "table": {
             "name": "Name",
@@ -50,7 +51,7 @@
             "price": "Price",
             "cost": "Cost",
             "stock": "Stock Quantity",
-            "minStock": "Min Stock Level",
+            "minStock": "Min Stock Level Alert",
             "category": "Category",
             "unit": "Unit",
             "description": "Description (Optional)"
@@ -317,6 +318,9 @@
         "sku": "SKU",
         "barcodeScanner": "Barcode Scanner",
         "autoScanner": "Automatic Scanner",
+        "autoScannerDesc": "Continuously scan codes",
+        "scanDelay": "Scan Delay",
+        "scanDelayDesc": "Delay between repeated scans of the same item.",
         "selectCamera": "Select Camera",
         "scannerEnabled": "Scanner Enabled",
         "scannerDisabled": "Scanner Disabled",
@@ -355,6 +359,25 @@
             "ordersDesc": "Create and track customer orders",
             "invoices": "Invoicing",
             "invoicesDesc": "Generate and manage invoices"
+        }
+    },
+    "categories": {
+        "title": "Categories",
+        "subtitle": "Manage product categories",
+        "addCategory": "Add Category",
+        "editCategory": "Edit Category",
+        "noCategory": "No Category",
+        "deletedCategory": "Deleted Category",
+        "form": {
+            "name": "Category Name",
+            "description": "Description (Optional)"
+        },
+        "messages": {
+            "addSuccess": "Category added successfully",
+            "updateSuccess": "Category updated successfully",
+            "deleteSuccess": "Category deleted successfully",
+            "deleteConfirm": "Are you sure you want to delete this category? Products will remain but will have no category.",
+            "duplicateName": "A category with this name already exists."
         }
     }
 }

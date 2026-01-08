@@ -1,9 +1,10 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Product, Customer, Order, Invoice, User, SyncQueueItem, Sale, SaleItem } from './models'
+import type { Product, Category, Customer, Order, Invoice, User, SyncQueueItem, Sale, SaleItem } from './models'
 
 // ERP Database using Dexie.js for IndexedDB
 export class ERPDatabase extends Dexie {
     products!: EntityTable<Product, 'id'>
+    categories!: EntityTable<Category, 'id'>
     customers!: EntityTable<Customer, 'id'>
     orders!: EntityTable<Order, 'id'>
     invoices!: EntityTable<Invoice, 'id'>
@@ -15,8 +16,9 @@ export class ERPDatabase extends Dexie {
     constructor() {
         super('ERPDatabase')
 
-        this.version(3).stores({
-            products: 'id, sku, name, category, workspaceId, syncStatus, updatedAt, isDeleted',
+        this.version(4).stores({
+            products: 'id, sku, name, categoryId, workspaceId, syncStatus, updatedAt, isDeleted',
+            categories: 'id, name, workspaceId, syncStatus, updatedAt, isDeleted',
             customers: 'id, name, email, workspaceId, syncStatus, updatedAt, isDeleted',
             orders: 'id, orderNumber, customerId, status, workspaceId, syncStatus, updatedAt, isDeleted',
             invoices: 'id, invoiceNumber, orderId, customerId, status, workspaceId, syncStatus, updatedAt, isDeleted',
@@ -33,8 +35,9 @@ export const db = new ERPDatabase()
 
 // Database utility functions
 export async function clearDatabase(): Promise<void> {
-    await db.transaction('rw', [db.products, db.customers, db.orders, db.invoices, db.syncQueue], async () => {
+    await db.transaction('rw', [db.products, db.categories, db.customers, db.orders, db.invoices, db.syncQueue], async () => {
         await db.products.clear()
+        await db.categories.clear()
         await db.customers.clear()
         await db.orders.clear()
         await db.invoices.clear()

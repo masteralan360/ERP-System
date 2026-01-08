@@ -30,6 +30,7 @@
         "title": "المنتجات",
         "subtitle": "إدارة المخزون الخاص بك",
         "addProduct": "إضافة منتج",
+        "addCategory": "إضافة فئة",
         "searchPlaceholder": "البحث عن منتجات...",
         "table": {
             "name": "الاسم",
@@ -314,6 +315,9 @@
         "sku": "SKU",
         "barcodeScanner": "ماسح الباركود",
         "autoScanner": "المسح التلقائي",
+        "autoScannerDesc": "المسح المستمر للأكواد",
+        "scanDelay": "تأخير المسح",
+        "scanDelayDesc": "التأخير بين عمليات المسح المتكررة لنفس الصنف.",
         "selectCamera": "اختر الكاميرا",
         "scannerEnabled": "الماسح مفعل",
         "scannerDisabled": "الماسح معطل",
@@ -354,6 +358,25 @@
             "ordersDesc": "إنشاء وتتبع طلبات العملاء",
             "invoices": "الفواتير",
             "invoicesDesc": "إنشاء وإدارة الفواتير"
+        }
+    },
+    "categories": {
+        "title": "الفئات",
+        "subtitle": "إدارة فئات المنتجات",
+        "addCategory": "إضافة فئة",
+        "editCategory": "تعديل الفئة",
+        "noCategory": "بدون فئة",
+        "deletedCategory": "فئة محذوفة",
+        "form": {
+            "name": "اسم الفئة",
+            "description": "الوصف (اختياري)"
+        },
+        "messages": {
+            "addSuccess": "تم إضافة الفئة بنجاح",
+            "updateSuccess": "تم تحديث الفئة بنجاح",
+            "deleteSuccess": "تم حذف الفئة بنجاح",
+            "deleteConfirm": "هل أنت متأكد من حذف هذه الفئة؟ ستبقى المنتجات المرتبطة بها، ولكن سيتم إزالة الفئة نفسها.",
+            "duplicateName": "هناك فئة بهذا الاسم موجودة بالفعل."
         }
     }
 }

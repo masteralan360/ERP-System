@@ -30,7 +30,7 @@ export interface Product extends BaseEntity {
     sku: string
     name: string
     description: string
-    category: string
+    categoryId?: string
     price: number
     costPrice: number
     quantity: number
@@ -38,6 +38,11 @@ export interface Product extends BaseEntity {
     unit: string
     barcode?: string
     imageUrl?: string
+}
+
+export interface Category extends BaseEntity {
+    name: string
+    description?: string
 }
 
 export interface Customer extends BaseEntity {
@@ -113,7 +118,7 @@ export interface SaleItem {
 // Sync Queue Item for tracking pending changes
 export interface SyncQueueItem {
     id: string
-    entityType: 'products' | 'customers' | 'orders' | 'invoices' | 'users' | 'sales'
+    entityType: 'products' | 'customers' | 'orders' | 'invoices' | 'users' | 'sales' | 'categories'
     entityId: string
     operation: 'create' | 'update' | 'delete'
     data: Record<string, unknown>

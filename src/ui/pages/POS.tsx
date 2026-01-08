@@ -54,6 +54,9 @@ export function POS() {
     const skuInputRef = useRef<HTMLInputElement>(null)
     const lastScannedCode = useRef<string | null>(null)
     const lastScannedTime = useRef<number>(0)
+    const [scanDelay, setScanDelay] = useState(() => {
+        return Number(localStorage.getItem('scanner_scan_delay')) || 2500
+    })
 
     // Filter products
     const filteredProducts = products.filter(
@@ -182,7 +185,7 @@ export function POS() {
 
         // Simple debounce/cooldown logic
         const now = Date.now()
-        if (text === lastScannedCode.current && (now - lastScannedTime.current) < 2500) {
+        if (text === lastScannedCode.current && (now - lastScannedTime.current) < scanDelay) {
             return
         }
 
@@ -534,7 +537,7 @@ export function POS() {
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-0.5">
                                         <Label className="text-base">{t('pos.autoScanner')}</Label>
-                                        <p className="text-xs text-muted-foreground">Continuously scan codes</p>
+                                        <p className="text-xs text-muted-foreground">{t('pos.autoScannerDesc')}</p>
                                     </div>
                                     <Switch
                                         checked={isScannerAutoEnabled}
@@ -546,7 +549,27 @@ export function POS() {
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-4 p-4 rounded-xl bg-muted/30 border border-border">
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">{t('pos.scanDelay')} (ms)</Label>
+                                    <Input
+                                        type="number"
+                                        value={scanDelay}
+                                        onChange={(e) => {
+                                            const val = Number(e.target.value)
+                                            setScanDelay(val)
+                                            localStorage.setItem('scanner_scan_delay', String(val))
+                                        }}
+                                        min={500}
+                                        max={10000}
+                                        step={100}
+                                        className="h-9"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground">{t('pos.scanDelayDesc')}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 col-span-full">
                                 <Label className="text-sm font-medium flex items-center gap-2">
                                     <SettingsIcon className="w-4 h-4" />
                                     {t('pos.selectCamera')}

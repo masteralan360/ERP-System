@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useProducts, createProduct, updateProduct, deleteProduct, type Product } from '@/local-db'
+import { useProducts, createProduct, updateProduct, deleteProduct, useCategories, createCategory, updateCategory, deleteCategory, type Product, type Category } from '@/local-db'
 import { formatCurrency } from '@/lib/utils'
 import {
     Table,
@@ -31,19 +31,29 @@ import { Plus, Pencil, Trash2, Package, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
 
-const CATEGORIES = ['Electronics', 'Clothing', 'Food', 'Furniture', 'Other']
 const UNITS = ['pcs', 'kg', 'liter', 'box', 'pack']
 
-type ProductFormData = Omit<Product, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted'>
+type ProductFormData = {
+    sku: string
+    name: string
+    description: string
+    categoryId: string | undefined
+    price: number | ''
+    costPrice: number | ''
+    quantity: number | ''
+    minStockLevel: number | ''
+    unit: string
+    imageUrl: string
+}
 
 const initialFormData: ProductFormData = {
     sku: '',
     name: '',
     description: '',
-    category: 'Other',
-    price: 0,
-    costPrice: 0,
-    quantity: 0,
+    categoryId: undefined,
+    price: '',
+    costPrice: '',
+    quantity: '',
     minStockLevel: 10,
     unit: 'pcs',
     imageUrl: ''
@@ -52,21 +62,31 @@ const initialFormData: ProductFormData = {
 export function Products() {
     const { user } = useAuth()
     const products = useProducts(user?.workspaceId)
+    const categories = useCategories(user?.workspaceId)
     const { t } = useTranslation()
     const canEdit = user?.role === 'admin' || user?.role === 'staff'
     const canDelete = user?.role === 'admin'
     const workspaceId = user?.workspaceId || ''
     const [search, setSearch] = useState('')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null)
     const [formData, setFormData] = useState<ProductFormData>(initialFormData)
+    const [categoryFormData, setCategoryFormData] = useState({ name: '', description: '' })
     const [isLoading, setIsLoading] = useState(false)
+
+    const getCategoryName = (id?: string) => {
+        if (!id) return t('categories.noCategory')
+        const cat = categories.find(c => c.id === id)
+        return cat?.name || t('categories.deletedCategory')
+    }
 
     const filteredProducts = products.filter(
         (p) =>
             p.name.toLowerCase().includes(search.toLowerCase()) ||
             p.sku.toLowerCase().includes(search.toLowerCase()) ||
-            p.category.toLowerCase().includes(search.toLowerCase())
+            getCategoryName(p.categoryId).toLowerCase().includes(search.toLowerCase())
     )
 
     const handleOpenDialog = (product?: Product) => {
@@ -76,7 +96,7 @@ export function Products() {
                 sku: product.sku,
                 name: product.name,
                 description: product.description,
-                category: product.category,
+                categoryId: product.categoryId,
                 price: product.price,
                 costPrice: product.costPrice,
                 quantity: product.quantity,
@@ -96,10 +116,18 @@ export function Products() {
         setIsLoading(true)
 
         try {
+            const dataToSave = {
+                ...formData,
+                price: Number(formData.price) || 0,
+                costPrice: Number(formData.costPrice) || 0,
+                quantity: Number(formData.quantity) || 0,
+                minStockLevel: Number(formData.minStockLevel) || 0
+            }
+
             if (editingProduct) {
-                await updateProduct(editingProduct.id, formData)
+                await updateProduct(editingProduct.id, dataToSave)
             } else {
-                await createProduct(workspaceId, formData)
+                await createProduct(workspaceId, dataToSave)
             }
             setIsDialogOpen(false)
             setFormData(initialFormData)
@@ -107,6 +135,41 @@ export function Products() {
             console.error('Error saving product:', error)
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    const handleCategorySubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsLoading(true)
+        try {
+            if (editingCategory) {
+                await updateCategory(editingCategory.id, categoryFormData)
+            } else {
+                await createCategory(workspaceId, categoryFormData)
+            }
+            setIsCategoryDialogOpen(false)
+            setCategoryFormData({ name: '', description: '' })
+        } catch (error) {
+            console.error('Error saving category:', error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleOpenCategoryDialog = (category?: Category) => {
+        if (category) {
+            setEditingCategory(category)
+            setCategoryFormData({ name: category.name, description: category.description || '' })
+        } else {
+            setEditingCategory(null)
+            setCategoryFormData({ name: '', description: '' })
+        }
+        setIsCategoryDialogOpen(true)
+    }
+
+    const handleDeleteCategory = async (id: string) => {
+        if (confirm(t('categories.messages.deleteConfirm'))) {
+            await deleteCategory(id)
         }
     }
 
@@ -127,13 +190,19 @@ export function Products() {
                     </h1>
                     <p className="text-muted-foreground">{t('products.subtitle') || 'Manage your inventory'}</p>
                 </div>
+                {canEdit && (
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)}>
+                            <Plus className="w-4 h-4" />
+                            {t('products.addCategory')}
+                        </Button>
+                        <Button onClick={() => handleOpenDialog()}>
+                            <Plus className="w-4 h-4" />
+                            {t('products.addProduct')}
+                        </Button>
+                    </div>
+                )}
             </div>
-            {canEdit && (
-                <Button onClick={() => handleOpenDialog()}>
-                    <Plus className="w-4 h-4" />
-                    {t('products.addProduct')}
-                </Button>
-            )}
 
             {/* Search */}
             <div className="relative max-w-md">
@@ -173,7 +242,7 @@ export function Products() {
                                     <TableRow key={product.id}>
                                         <TableCell className="font-mono text-sm">{product.sku}</TableCell>
                                         <TableCell className="font-medium">{product.name}</TableCell>
-                                        <TableCell>{product.category}</TableCell>
+                                        <TableCell>{getCategoryName(product.categoryId)}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(product.price)}</TableCell>
                                         <TableCell className="text-right">
                                             <span className={product.quantity <= product.minStockLevel ? 'text-amber-500 font-medium' : ''}>
@@ -249,13 +318,14 @@ export function Products() {
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
                                 <Label htmlFor="category">{t('products.table.category')}</Label>
-                                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                                <Select value={formData.categoryId || 'none'} onValueChange={(value) => setFormData({ ...formData, categoryId: value === 'none' ? undefined : value })}>
                                     <SelectTrigger>
-                                        <SelectValue />
+                                        <SelectValue placeholder={t('categories.noCategory')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {CATEGORIES.map((cat) => (
-                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        <SelectItem value="none">{t('categories.noCategory')}</SelectItem>
+                                        {categories.map((cat) => (
+                                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -284,7 +354,8 @@ export function Products() {
                                     min="0"
                                     step="0.01"
                                     value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                                    placeholder="0.00"
                                     required
                                 />
                             </div>
@@ -296,7 +367,8 @@ export function Products() {
                                     min="0"
                                     step="0.01"
                                     value={formData.costPrice}
-                                    onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })}
+                                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                                    placeholder="0.00"
                                     required
                                 />
                             </div>
@@ -310,7 +382,8 @@ export function Products() {
                                     type="number"
                                     min="0"
                                     value={formData.quantity}
-                                    onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+                                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                    placeholder="0"
                                     required
                                 />
                             </div>
@@ -321,7 +394,7 @@ export function Products() {
                                     type="number"
                                     min="0"
                                     value={formData.minStockLevel}
-                                    onChange={(e) => setFormData({ ...formData, minStockLevel: parseInt(e.target.value) || 0 })}
+                                    onChange={(e) => setFormData({ ...formData, minStockLevel: e.target.value === '' ? '' : parseInt(e.target.value) })}
                                     required
                                 />
                             </div>
@@ -333,6 +406,69 @@ export function Products() {
                             </Button>
                             <Button type="submit" disabled={isLoading}>
                                 {isLoading ? t('common.loading') : editingProduct ? t('common.save') : t('common.create')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+            {/* Category Dialog */}
+            <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{editingCategory ? t('categories.editCategory') : t('categories.addCategory')}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleCategorySubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="cat-name">{t('categories.form.name')}</Label>
+                            <Input
+                                id="cat-name"
+                                value={categoryFormData.name}
+                                onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
+                                placeholder={t('categories.form.name')}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="cat-description">{t('categories.form.description')}</Label>
+                            <Textarea
+                                id="cat-description"
+                                value={categoryFormData.description}
+                                onChange={(e) => setCategoryFormData({ ...categoryFormData, description: e.target.value })}
+                                placeholder={t('categories.form.description')}
+                                rows={3}
+                            />
+                        </div>
+
+                        {/* Category List (Management) */}
+                        {!editingCategory && categories.length > 0 && (
+                            <div className="pt-4 border-t">
+                                <Label className="mb-2 block text-sm font-medium">Existing Categories</Label>
+                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                    {categories.map((cat) => (
+                                        <div key={cat.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md group">
+                                            <span className="text-sm">{cat.name}</span>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleOpenCategoryDialog(cat)}>
+                                                    <Pencil className="h-3 w-3" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCategory(cat.id)}>
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <DialogFooter>
+                            {editingCategory && (
+                                <Button type="button" variant="ghost" onClick={() => setEditingCategory(null)}>
+                                    Cancel Edit
+                                </Button>
+                            )}
+                            <Button type="submit" disabled={isLoading}>
+                                {isLoading ? t('common.loading') : editingCategory ? t('common.save') : t('common.create')}
                             </Button>
                         </DialogFooter>
                     </form>
