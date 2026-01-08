@@ -52,6 +52,8 @@ export function POS() {
     const [selectedCameraId, setSelectedCameraId] = useState(localStorage.getItem('scanner_camera_id') || '')
     const [cameras, setCameras] = useState<MediaDeviceInfo[]>([])
     const skuInputRef = useRef<HTMLInputElement>(null)
+    const lastScannedCode = useRef<string | null>(null)
+    const lastScannedTime = useRef<number>(0)
 
     // Filter products
     const filteredProducts = products.filter(
@@ -177,6 +179,15 @@ export function POS() {
     const handleBarcodeDetected = (barcodes: any[]) => {
         if (!isScannerAutoEnabled || barcodes.length === 0) return
         const text = barcodes[0].rawValue
+
+        // Simple debounce/cooldown logic
+        const now = Date.now()
+        if (text === lastScannedCode.current && (now - lastScannedTime.current) < 2500) {
+            return
+        }
+
+        lastScannedCode.current = text
+        lastScannedTime.current = now
 
         const product = products.find((p) =>
             (p.barcode && p.barcode === text) ||
@@ -501,7 +512,7 @@ export function POS() {
                                             'upc_e',
                                             'qr_code'
                                         ],
-                                        delay: 500
+                                        delay: 1000
                                     }}
                                 />
                             ) : (
