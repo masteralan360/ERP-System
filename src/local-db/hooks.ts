@@ -1,36 +1,99 @@
+import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './database'
-import type { Product, Category, Customer, Order, Invoice, SyncQueueItem } from './models'
-import { generateId } from '@/lib/utils'
+import type { Product, Category, Customer, Order, Invoice, SyncQueueItem, OfflineMutation } from './models'
+import { generateId, toSnakeCase, toCamelCase } from '@/lib/utils'
+import { supabase } from '@/auth/supabase'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+
+// ===================
+// CATEGORIES HOOKS
+// ===================
 
 // ===================
 // CATEGORIES HOOKS
 // ===================
 
 export function useCategories(workspaceId: string | undefined) {
+    const isOnline = useNetworkStatus()
+
+    // 1. Local Cache (Always Source of Truth for UI)
     const categories = useLiveQuery(
         () => workspaceId ? db.categories.where('workspaceId').equals(workspaceId).and(c => !c.isDeleted).toArray() : [],
         [workspaceId]
     )
+
+    // 2. Online: Fetch fresh data from Supabase & cleanup cache
+    useEffect(() => {
+        async function fetchFromSupabase() {
+            if (isOnline && workspaceId) {
+                const { data, error } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .eq('workspace_id', workspaceId)
+                    .eq('is_deleted', false)
+
+                if (data && !error) {
+                    await db.transaction('rw', db.categories, async () => {
+                        const remoteIds = new Set(data.map(d => d.id))
+                        const localItems = await db.categories.where('workspaceId').equals(workspaceId).toArray()
+
+                        // Delete local items that are 'synced' but missing from server
+                        for (const local of localItems) {
+                            if (!remoteIds.has(local.id) && local.syncStatus === 'synced') {
+                                await db.categories.delete(local.id)
+                            }
+                        }
+
+                        for (const remoteItem of data) {
+                            const localItem = toCamelCase(remoteItem as any) as unknown as Category
+                            localItem.syncStatus = 'synced'
+                            localItem.lastSyncedAt = new Date().toISOString()
+                            await db.categories.put(localItem)
+                        }
+                    })
+                }
+            }
+        }
+        fetchFromSupabase()
+    }, [isOnline, workspaceId])
+
     return categories ?? []
 }
 
 export async function createCategory(workspaceId: string, data: Omit<Category, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted'>): Promise<Category> {
     const now = new Date().toISOString()
+    const id = generateId()
+
     const category: Category = {
         ...data,
-        id: generateId(),
+        id,
         workspaceId,
         createdAt: now,
         updatedAt: now,
-        syncStatus: 'pending',
-        lastSyncedAt: null,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any, // Optimistic status
+        lastSyncedAt: navigator.onLine ? now : null,
         version: 1,
         isDeleted: false
     }
 
-    await db.categories.add(category)
-    await addToSyncQueue('categories', category.id, 'create', category as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE: Write directly to Supabase
+        const payload = toSnakeCase({ ...category, syncStatus: undefined, lastSyncedAt: undefined })
+        const { error } = await supabase.from('categories').insert(payload)
+
+        if (error) {
+            console.error('Supabase write failed:', error)
+            throw error // Fail loudly if online
+        }
+
+        // Update local cache as synced
+        await db.categories.add(category)
+    } else {
+        // OFFLINE: Write to local mutation queue
+        await db.categories.add(category)
+        await addToOfflineMutations('categories', id, 'create', category as unknown as Record<string, unknown>, workspaceId)
+    }
 
     return category
 }
@@ -44,12 +107,24 @@ export async function updateCategory(id: string, data: Partial<Category>): Promi
         ...existing,
         ...data,
         updatedAt: now,
-        syncStatus: 'pending' as const,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
+        lastSyncedAt: navigator.onLine ? now : existing.lastSyncedAt,
         version: existing.version + 1
     }
 
-    await db.categories.put(updated)
-    await addToSyncQueue('categories', id, 'update', updated as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE: Update Supabase directly
+        const payload = toSnakeCase({ ...data, updatedAt: now })
+        const { error } = await supabase.from('categories').update(payload).eq('id', id)
+
+        if (error) throw error
+
+        await db.categories.put(updated)
+    } else {
+        // OFFLINE: Local mutation
+        await db.categories.put(updated)
+        await addToOfflineMutations('categories', id, 'update', updated as unknown as Record<string, unknown>, existing.workspaceId)
+    }
 }
 
 export async function deleteCategory(id: string): Promise<void> {
@@ -57,24 +132,78 @@ export async function deleteCategory(id: string): Promise<void> {
     const existing = await db.categories.get(id)
     if (!existing) return
 
-    await db.categories.update(id, {
+    const updated = {
+        ...existing,
         isDeleted: true,
         updatedAt: now,
-        syncStatus: 'pending',
+        syncStatus: navigator.onLine ? 'synced' : 'pending',
         version: existing.version + 1
-    })
-    await addToSyncQueue('categories', id, 'delete', { id })
+    } as Category
+
+    if (navigator.onLine) {
+        // ONLINE: Delete in Supabase (Soft Delete)
+        const { error } = await supabase.from('categories').update({ is_deleted: true, updated_at: now }).eq('id', id)
+        if (error) throw error
+
+        await db.categories.put(updated)
+    } else {
+        // OFFLINE
+        await db.categories.put(updated)
+        // For delete, we might just need the ID, but passing full updated record is safe or just payload with ID
+        await addToOfflineMutations('categories', id, 'delete', { id }, existing.workspaceId)
+    }
 }
 
 // ===================
 // PRODUCTS HOOKS
 // ===================
 
+// ===================
+// PRODUCTS HOOKS
+// ===================
+
 export function useProducts(workspaceId: string | undefined) {
+    const isOnline = useNetworkStatus()
+
     const products = useLiveQuery(
         () => workspaceId ? db.products.where('workspaceId').equals(workspaceId).and(p => !p.isDeleted).toArray() : [],
         [workspaceId]
     )
+
+    useEffect(() => {
+        async function fetchFromSupabase() {
+            if (isOnline && workspaceId) {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .eq('workspace_id', workspaceId)
+                    .eq('is_deleted', false)
+
+                if (data && !error) {
+                    await db.transaction('rw', db.products, async () => {
+                        const remoteIds = new Set(data.map(d => d.id))
+                        const localItems = await db.products.where('workspaceId').equals(workspaceId).toArray()
+
+                        // Delete local items that are 'synced' but missing from server
+                        for (const local of localItems) {
+                            if (!remoteIds.has(local.id) && local.syncStatus === 'synced') {
+                                await db.products.delete(local.id)
+                            }
+                        }
+
+                        for (const remoteItem of data) {
+                            const localItem = toCamelCase(remoteItem as any) as unknown as Product
+                            localItem.syncStatus = 'synced'
+                            localItem.lastSyncedAt = new Date().toISOString()
+                            await db.products.put(localItem)
+                        }
+                    })
+                }
+            }
+        }
+        fetchFromSupabase()
+    }, [isOnline, workspaceId])
+
     return products ?? []
 }
 
@@ -88,20 +217,36 @@ export function useProduct(id: string | undefined) {
 
 export async function createProduct(workspaceId: string, data: Omit<Product, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted'>): Promise<Product> {
     const now = new Date().toISOString()
+    const id = generateId()
+
     const product: Product = {
         ...data,
-        id: generateId(),
+        id,
         workspaceId,
         createdAt: now,
         updatedAt: now,
-        syncStatus: 'pending',
-        lastSyncedAt: null,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any, // Cast to any or SyncStatus to fix TS error
+        lastSyncedAt: navigator.onLine ? now : null,
         version: 1,
         isDeleted: false
     }
 
-    await db.products.add(product)
-    await addToSyncQueue('products', product.id, 'create', product as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE
+        const payload = toSnakeCase({ ...product, syncStatus: undefined, lastSyncedAt: undefined })
+        const { error } = await supabase.from('products').insert(payload)
+
+        if (error) {
+            console.error('Supabase write failed:', error)
+            throw error
+        }
+
+        await db.products.add(product)
+    } else {
+        // OFFLINE
+        await db.products.add(product)
+        await addToOfflineMutations('products', id, 'create', product as unknown as Record<string, unknown>, workspaceId)
+    }
 
     return product
 }
@@ -115,12 +260,24 @@ export async function updateProduct(id: string, data: Partial<Product>): Promise
         ...existing,
         ...data,
         updatedAt: now,
-        syncStatus: 'pending' as const,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
+        lastSyncedAt: navigator.onLine ? now : existing.lastSyncedAt,
         version: existing.version + 1
     }
 
-    await db.products.put(updated)
-    await addToSyncQueue('products', id, 'update', updated as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE
+        const payload = toSnakeCase({ ...data, updatedAt: now })
+        const { error } = await supabase.from('products').update(payload).eq('id', id)
+
+        if (error) throw error
+
+        await db.products.put(updated)
+    } else {
+        // OFFLINE
+        await db.products.put(updated)
+        await addToOfflineMutations('products', id, 'update', updated as unknown as Record<string, unknown>, existing.workspaceId)
+    }
 }
 
 export async function deleteProduct(id: string): Promise<void> {
@@ -128,13 +285,25 @@ export async function deleteProduct(id: string): Promise<void> {
     const existing = await db.products.get(id)
     if (!existing) return
 
-    await db.products.update(id, {
+    const updated = {
+        ...existing,
         isDeleted: true,
         updatedAt: now,
-        syncStatus: 'pending',
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
         version: existing.version + 1
-    })
-    await addToSyncQueue('products', id, 'delete', { id })
+    } as Product
+
+    if (navigator.onLine) {
+        // ONLINE
+        const { error } = await supabase.from('products').update({ is_deleted: true, updated_at: now }).eq('id', id)
+        if (error) throw error
+
+        await db.products.put(updated)
+    } else {
+        // OFFLINE
+        await db.products.put(updated)
+        await addToOfflineMutations('products', id, 'delete', { id }, existing.workspaceId)
+    }
 }
 
 // ===================
@@ -142,10 +311,47 @@ export async function deleteProduct(id: string): Promise<void> {
 // ===================
 
 export function useCustomers(workspaceId: string | undefined) {
+    const isOnline = useNetworkStatus()
+
     const customers = useLiveQuery(
         () => workspaceId ? db.customers.where('workspaceId').equals(workspaceId).and(c => !c.isDeleted).toArray() : [],
         [workspaceId]
     )
+
+    useEffect(() => {
+        async function fetchFromSupabase() {
+            if (isOnline && workspaceId) {
+                const { data, error } = await supabase
+                    .from('customers')
+                    .select('*')
+                    .eq('workspace_id', workspaceId)
+                    .eq('is_deleted', false)
+
+                if (data && !error) {
+                    await db.transaction('rw', db.customers, async () => {
+                        const remoteIds = new Set(data.map(d => d.id))
+                        const localItems = await db.customers.where('workspaceId').equals(workspaceId).toArray()
+
+                        // Delete local items that are 'synced' but missing from server
+                        for (const local of localItems) {
+                            if (!remoteIds.has(local.id) && local.syncStatus === 'synced') {
+                                await db.customers.delete(local.id)
+                            }
+                        }
+
+                        for (const remoteItem of data) {
+                            const localItem = toCamelCase(remoteItem as any) as unknown as Customer
+                            localItem.syncStatus = 'synced'
+                            localItem.lastSyncedAt = new Date().toISOString()
+                            await db.customers.put(localItem)
+                        }
+                    })
+                }
+            }
+        }
+        fetchFromSupabase()
+    }, [isOnline, workspaceId])
+
     return customers ?? []
 }
 
@@ -159,22 +365,38 @@ export function useCustomer(id: string | undefined) {
 
 export async function createCustomer(workspaceId: string, data: Omit<Customer, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'totalOrders' | 'totalSpent'>): Promise<Customer> {
     const now = new Date().toISOString()
+    const id = generateId()
+
     const customer: Customer = {
         ...data,
-        id: generateId(),
+        id,
         workspaceId,
         createdAt: now,
         updatedAt: now,
-        syncStatus: 'pending',
-        lastSyncedAt: null,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
+        lastSyncedAt: navigator.onLine ? now : null,
         version: 1,
         isDeleted: false,
         totalOrders: 0,
         totalSpent: 0
     }
 
-    await db.customers.add(customer)
-    await addToSyncQueue('customers', customer.id, 'create', customer as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE
+        const payload = toSnakeCase({ ...customer, syncStatus: undefined, lastSyncedAt: undefined })
+        const { error } = await supabase.from('customers').insert(payload)
+
+        if (error) {
+            console.error('Supabase write failed:', error)
+            throw error
+        }
+
+        await db.customers.add(customer)
+    } else {
+        // OFFLINE
+        await db.customers.add(customer)
+        await addToOfflineMutations('customers', id, 'create', customer as unknown as Record<string, unknown>, workspaceId)
+    }
 
     return customer
 }
@@ -188,12 +410,24 @@ export async function updateCustomer(id: string, data: Partial<Customer>): Promi
         ...existing,
         ...data,
         updatedAt: now,
-        syncStatus: 'pending' as const,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
+        lastSyncedAt: navigator.onLine ? now : existing.lastSyncedAt,
         version: existing.version + 1
     }
 
-    await db.customers.put(updated)
-    await addToSyncQueue('customers', id, 'update', updated as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE
+        const payload = toSnakeCase({ ...data, updatedAt: now })
+        const { error } = await supabase.from('customers').update(payload).eq('id', id)
+
+        if (error) throw error
+
+        await db.customers.put(updated)
+    } else {
+        // OFFLINE
+        await db.customers.put(updated)
+        await addToOfflineMutations('customers', id, 'update', updated as unknown as Record<string, unknown>, existing.workspaceId)
+    }
 }
 
 export async function deleteCustomer(id: string): Promise<void> {
@@ -201,13 +435,25 @@ export async function deleteCustomer(id: string): Promise<void> {
     const existing = await db.customers.get(id)
     if (!existing) return
 
-    await db.customers.update(id, {
+    const updated = {
+        ...existing,
         isDeleted: true,
         updatedAt: now,
-        syncStatus: 'pending',
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
         version: existing.version + 1
-    })
-    await addToSyncQueue('customers', id, 'delete', { id })
+    } as Customer
+
+    if (navigator.onLine) {
+        // ONLINE
+        const { error } = await supabase.from('customers').update({ is_deleted: true, updated_at: now }).eq('id', id)
+        if (error) throw error
+
+        await db.customers.put(updated)
+    } else {
+        // OFFLINE
+        await db.customers.put(updated)
+        await addToOfflineMutations('customers', id, 'delete', { id }, existing.workspaceId)
+    }
 }
 
 // ===================
@@ -215,10 +461,47 @@ export async function deleteCustomer(id: string): Promise<void> {
 // ===================
 
 export function useOrders(workspaceId: string | undefined) {
+    const isOnline = useNetworkStatus()
+
     const orders = useLiveQuery(
         () => workspaceId ? db.orders.where('workspaceId').equals(workspaceId).and(o => !o.isDeleted).toArray() : [],
         [workspaceId]
     )
+
+    useEffect(() => {
+        async function fetchFromSupabase() {
+            if (isOnline && workspaceId) {
+                const { data, error } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('workspace_id', workspaceId)
+                    .eq('is_deleted', false)
+
+                if (data && !error) {
+                    await db.transaction('rw', db.orders, async () => {
+                        const remoteIds = new Set(data.map(d => d.id))
+                        const localItems = await db.orders.where('workspaceId').equals(workspaceId).toArray()
+
+                        // Delete local items that are 'synced' but missing from server
+                        for (const local of localItems) {
+                            if (!remoteIds.has(local.id) && local.syncStatus === 'synced') {
+                                await db.orders.delete(local.id)
+                            }
+                        }
+
+                        for (const remoteItem of data) {
+                            const localItem = toCamelCase(remoteItem as any) as unknown as Order
+                            localItem.syncStatus = 'synced'
+                            localItem.lastSyncedAt = new Date().toISOString()
+                            await db.orders.put(localItem)
+                        }
+                    })
+                }
+            }
+        }
+        fetchFromSupabase()
+    }, [isOnline, workspaceId])
+
     return orders ?? []
 }
 
@@ -233,24 +516,41 @@ export function useOrder(id: string | undefined) {
 export async function createOrder(workspaceId: string, data: Omit<Order, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'orderNumber'>): Promise<Order> {
     const now = new Date().toISOString()
     const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`
+    const id = generateId()
 
     const order: Order = {
         ...data,
-        id: generateId(),
+        id,
         workspaceId,
         orderNumber,
         createdAt: now,
         updatedAt: now,
-        syncStatus: 'pending',
-        lastSyncedAt: null,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
+        lastSyncedAt: navigator.onLine ? now : null,
         version: 1,
         isDeleted: false
     }
 
-    await db.orders.add(order)
-    await addToSyncQueue('orders', order.id, 'create', order as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE
+        const payload = toSnakeCase({ ...order, syncStatus: undefined, lastSyncedAt: undefined })
+        const { error } = await supabase.from('orders').insert(payload)
 
-    // Update customer stats
+        if (error) {
+            console.error('Supabase write failed:', error)
+            throw error
+        }
+
+        await db.orders.add(order)
+    } else {
+        // OFFLINE
+        await db.orders.add(order)
+        await addToOfflineMutations('orders', id, 'create', order as unknown as Record<string, unknown>, workspaceId)
+    }
+
+    // Update customer stats (Locally always, maybe server triggers too but local needs consistency)
+    // Ideally this should be an atomic transaction or handled by server function if online.
+    // But for hybrid, we do local update.
     const customer = await db.customers.get(data.customerId)
     if (customer) {
         await db.customers.update(data.customerId, {
@@ -271,12 +571,24 @@ export async function updateOrder(id: string, data: Partial<Order>): Promise<voi
         ...existing,
         ...data,
         updatedAt: now,
-        syncStatus: 'pending' as const,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
+        lastSyncedAt: navigator.onLine ? now : existing.lastSyncedAt,
         version: existing.version + 1
     }
 
-    await db.orders.put(updated)
-    await addToSyncQueue('orders', id, 'update', updated as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE
+        const payload = toSnakeCase({ ...data, updatedAt: now })
+        const { error } = await supabase.from('orders').update(payload).eq('id', id)
+
+        if (error) throw error
+
+        await db.orders.put(updated)
+    } else {
+        // OFFLINE
+        await db.orders.put(updated)
+        await addToOfflineMutations('orders', id, 'update', updated as unknown as Record<string, unknown>, existing.workspaceId)
+    }
 }
 
 export async function deleteOrder(id: string): Promise<void> {
@@ -284,13 +596,25 @@ export async function deleteOrder(id: string): Promise<void> {
     const existing = await db.orders.get(id)
     if (!existing) return
 
-    await db.orders.update(id, {
+    const updated = {
+        ...existing,
         isDeleted: true,
         updatedAt: now,
-        syncStatus: 'pending',
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
         version: existing.version + 1
-    })
-    await addToSyncQueue('orders', id, 'delete', { id })
+    } as Order
+
+    if (navigator.onLine) {
+        // ONLINE
+        const { error } = await supabase.from('orders').update({ is_deleted: true, updated_at: now }).eq('id', id)
+        if (error) throw error
+
+        await db.orders.put(updated)
+    } else {
+        // OFFLINE
+        await db.orders.put(updated)
+        await addToOfflineMutations('orders', id, 'delete', { id }, existing.workspaceId)
+    }
 }
 
 // ===================
@@ -298,10 +622,47 @@ export async function deleteOrder(id: string): Promise<void> {
 // ===================
 
 export function useInvoices(workspaceId: string | undefined) {
+    const isOnline = useNetworkStatus()
+
     const invoices = useLiveQuery(
         () => workspaceId ? db.invoices.where('workspaceId').equals(workspaceId).and(i => !i.isDeleted).toArray() : [],
         [workspaceId]
     )
+
+    useEffect(() => {
+        async function fetchFromSupabase() {
+            if (isOnline && workspaceId) {
+                const { data, error } = await supabase
+                    .from('invoices')
+                    .select('*')
+                    .eq('workspace_id', workspaceId)
+                    .eq('is_deleted', false)
+
+                if (data && !error) {
+                    await db.transaction('rw', db.invoices, async () => {
+                        const remoteIds = new Set(data.map(d => d.id))
+                        const localItems = await db.invoices.where('workspaceId').equals(workspaceId).toArray()
+
+                        // Delete local items that are 'synced' but missing from server
+                        for (const local of localItems) {
+                            if (!remoteIds.has(local.id) && local.syncStatus === 'synced') {
+                                await db.invoices.delete(local.id)
+                            }
+                        }
+
+                        for (const remoteItem of data) {
+                            const localItem = toCamelCase(remoteItem as any) as unknown as Invoice
+                            localItem.syncStatus = 'synced'
+                            localItem.lastSyncedAt = new Date().toISOString()
+                            await db.invoices.put(localItem)
+                        }
+                    })
+                }
+            }
+        }
+        fetchFromSupabase()
+    }, [isOnline, workspaceId])
+
     return invoices ?? []
 }
 
@@ -316,22 +677,37 @@ export function useInvoice(id: string | undefined) {
 export async function createInvoice(workspaceId: string, data: Omit<Invoice, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'lastSyncedAt' | 'version' | 'isDeleted' | 'invoiceNumber'>): Promise<Invoice> {
     const now = new Date().toISOString()
     const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`
+    const id = generateId()
 
     const invoice: Invoice = {
         ...data,
-        id: generateId(),
+        id,
         workspaceId,
         invoiceNumber,
         createdAt: now,
         updatedAt: now,
-        syncStatus: 'pending',
-        lastSyncedAt: null,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
+        lastSyncedAt: navigator.onLine ? now : null,
         version: 1,
         isDeleted: false
     }
 
-    await db.invoices.add(invoice)
-    await addToSyncQueue('invoices', invoice.id, 'create', invoice as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE
+        const payload = toSnakeCase({ ...invoice, syncStatus: undefined, lastSyncedAt: undefined })
+        const { error } = await supabase.from('invoices').insert(payload)
+
+        if (error) {
+            console.error('Supabase write failed:', error)
+            throw error
+        }
+
+        await db.invoices.add(invoice)
+    } else {
+        // OFFLINE
+        await db.invoices.add(invoice)
+        await addToOfflineMutations('invoices', id, 'create', invoice as unknown as Record<string, unknown>, workspaceId)
+    }
 
     return invoice
 }
@@ -345,12 +721,24 @@ export async function updateInvoice(id: string, data: Partial<Invoice>): Promise
         ...existing,
         ...data,
         updatedAt: now,
-        syncStatus: 'pending' as const,
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
+        lastSyncedAt: navigator.onLine ? now : existing.lastSyncedAt,
         version: existing.version + 1
     }
 
-    await db.invoices.put(updated)
-    await addToSyncQueue('invoices', id, 'update', updated as unknown as Record<string, unknown>)
+    if (navigator.onLine) {
+        // ONLINE
+        const payload = toSnakeCase({ ...data, updatedAt: now })
+        const { error } = await supabase.from('invoices').update(payload).eq('id', id)
+
+        if (error) throw error
+
+        await db.invoices.put(updated)
+    } else {
+        // OFFLINE
+        await db.invoices.put(updated)
+        await addToOfflineMutations('invoices', id, 'update', updated as unknown as Record<string, unknown>, existing.workspaceId)
+    }
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
@@ -358,13 +746,25 @@ export async function deleteInvoice(id: string): Promise<void> {
     const existing = await db.invoices.get(id)
     if (!existing) return
 
-    await db.invoices.update(id, {
+    const updated = {
+        ...existing,
         isDeleted: true,
         updatedAt: now,
-        syncStatus: 'pending',
+        syncStatus: (navigator.onLine ? 'synced' : 'pending') as any,
         version: existing.version + 1
-    })
-    await addToSyncQueue('invoices', id, 'delete', { id })
+    } as Invoice
+
+    if (navigator.onLine) {
+        // ONLINE
+        const { error } = await supabase.from('invoices').update({ is_deleted: true, updated_at: now }).eq('id', id)
+        if (error) throw error
+
+        await db.invoices.put(updated)
+    } else {
+        // OFFLINE
+        await db.invoices.put(updated)
+        await addToOfflineMutations('invoices', id, 'delete', { id }, existing.workspaceId)
+    }
 }
 
 // ===================
@@ -377,10 +777,30 @@ export function useSyncQueue() {
 }
 
 export function usePendingSyncCount() {
-    const count = useLiveQuery(() => db.syncQueue.count(), [])
+    const count = useLiveQuery(() => db.offline_mutations.where('status').equals('pending').count(), [])
     return count ?? 0
 }
 
+export async function addToOfflineMutations(
+    entityType: OfflineMutation['entityType'],
+    entityId: string,
+    operation: OfflineMutation['operation'],
+    payload: Record<string, unknown>,
+    workspaceId: string
+): Promise<void> {
+    await db.offline_mutations.add({
+        id: generateId(),
+        workspaceId,
+        entityType,
+        entityId,
+        operation,
+        payload,
+        createdAt: new Date().toISOString(),
+        status: 'pending'
+    })
+}
+
+// Deprecated: Old sync queue (will be removed)
 async function addToSyncQueue(
     entityType: SyncQueueItem['entityType'],
     entityId: string,

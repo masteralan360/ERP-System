@@ -126,6 +126,21 @@ export interface SyncQueueItem {
     retryCount: number
 }
 
+// Offline Mutation for manual sync queue
+export type MutationStatus = 'pending' | 'syncing' | 'failed' | 'synced'
+
+export interface OfflineMutation {
+    id: string
+    workspaceId: string
+    entityType: 'products' | 'customers' | 'orders' | 'invoices' | 'users' | 'sales' | 'categories'
+    entityId: string
+    operation: 'create' | 'update' | 'delete'
+    payload: Record<string, unknown>
+    createdAt: string
+    status: MutationStatus
+    error?: string
+}
+
 // Type guards
 export function isProduct(entity: BaseEntity): entity is Product {
     return 'sku' in entity && 'price' in entity

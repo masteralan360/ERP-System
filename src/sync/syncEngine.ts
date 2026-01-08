@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from '@/auth/supabase'
 import { db } from '@/local-db'
-import { getPendingItems, removeFromQueue, incrementRetry } from './syncQueue'
+// import { getPendingItems, removeFromQueue, incrementRetry } from './syncQueue'
 
 export type SyncState = 'idle' | 'syncing' | 'error' | 'offline'
 
@@ -131,49 +131,80 @@ async function pushItem(item: any, userId: string, workspaceId: string): Promise
     }
 }
 
-// Push all pending changes to Supabase
-export async function pushChanges(userId: string, workspaceId: string): Promise<{ success: number; failed: number }> {
+// Process offline mutation queue
+export async function processMutationQueue(userId: string): Promise<{ success: number; failed: number; error?: string }> {
     if (!isSupabaseConfigured) {
-        console.log('[Sync] pushChanges: Supabase not configured')
-        return { success: 0, failed: 0 }
+        return { success: 0, failed: 1, error: 'Supabase not configured' }
     }
 
-    const pendingItems = await getPendingItems()
-    console.log(`[Sync] pushChanges: Found ${pendingItems.length} items in queue`)
+    const mutations = await db.offline_mutations
+        .where('status')
+        .equals('pending')
+        .sortBy('createdAt')
+
+    console.log(`[Sync] processMutationQueue: Found ${mutations.length} pending mutations`)
 
     let successCount = 0
-    let failedCount = 0
 
-    for (const item of pendingItems) {
-        if (item.retryCount >= 5) { // Increased retry limit
-            console.warn(`[Sync] pushChanges: Skipping item ${item.entityId} after ${item.retryCount} failed attempts`)
-            failedCount++
-            continue
-        }
+    for (const mutation of mutations) {
+        // Update status to syncing
+        await db.offline_mutations.update(mutation.id, { status: 'syncing' })
 
-        const pushed = await pushItem(item, userId, workspaceId)
-        if (pushed) {
-            await removeFromQueue(item.id)
+        try {
+            const { entityType, operation, payload, entityId, workspaceId, id } = mutation
+            const tableName = getTableName(entityType)
 
-            // Update local record sync status
-            const table = (db as any)[item.entityType]
+            // Prepare payload
+            const dbPayload = toSnakeCase(payload) as Record<string, unknown>
+            // Ensure IDs and metadata
+            dbPayload.user_id = userId
+            dbPayload.workspace_id = workspaceId
+
+            // Remove local metadata
+            delete dbPayload.sync_status
+            delete dbPayload.last_synced_at
+
+            if (operation === 'create' || operation === 'update') {
+                if (entityType === 'sales') {
+                    const { error } = await supabase.rpc('complete_sale', { payload: dbPayload })
+                    if (error) throw error
+                } else {
+                    const { error } = await supabase.from(tableName).upsert(dbPayload)
+                    if (error) throw error
+                }
+            } else if (operation === 'delete') {
+                const { error } = await supabase.from(tableName).update({ is_deleted: true, updated_at: new Date().toISOString() }).eq('id', entityId)
+                if (error) throw error
+            }
+
+            // Success: Mark as synced
+            await db.offline_mutations.update(id, { status: 'synced' }) // Or delete if preferred, but synced is good for history
+
+            // Also update the actual entity sync status to 'synced'
+            const table = (db as any)[entityType]
             if (table) {
-                await table.update(item.entityId, {
-                    syncStatus: 'synced',
-                    lastSyncedAt: new Date().toISOString()
-                })
+                await table.update(entityId, { syncStatus: 'synced', lastSyncedAt: new Date().toISOString() })
             }
 
             successCount++
-        } else {
-            console.log(`[Sync] pushChanges: Incrementing retry for ${item.entityId}`)
-            await incrementRetry(item.id)
-            failedCount++
+
+        } catch (err: any) {
+            console.error(`[Sync] Failed mutation ${mutation.id}:`, err)
+            await db.offline_mutations.update(mutation.id, { status: 'failed', error: err.message || 'Unknown error' })
+            // Stop processing on first error to maintain order integrity
+            return { success: successCount, failed: 1, error: err.message }
         }
     }
 
-    console.log(`[Sync] pushChanges COMPLETE: ${successCount} succeeded, ${failedCount} failed`)
-    return { success: successCount, failed: failedCount }
+    return { success: successCount, failed: 0 }
+}
+
+// Deprecated: Old pushChanges (kept for reference or fallback if needed during transition)
+export async function pushChanges(_userId: string, _workspaceId: string): Promise<{ success: number; failed: number }> {
+    // Redirect to new logic? Or just leave as legacy.
+    // For now, let's leave it but maybe logs warning.
+    console.warn('[Sync] pushChanges is deprecated. Use processMutationQueue.')
+    return { success: 0, failed: 0 }
 }
 
 // Pull changes from Supabase
@@ -192,7 +223,7 @@ export async function pullChanges(workspaceId: string, lastSyncTime: string | nu
 
     for (const table of tables) {
         try {
-            console.log(`[Sync] pullChanges: Fetching ${table}...`)
+            // console.log(`[Sync] pullChanges: Fetching ${table}...`)
             const { data, error } = (await withTimeout(
                 supabase
                     .from(table)
@@ -215,7 +246,20 @@ export async function pullChanges(workspaceId: string, lastSyncTime: string | nu
                     const localItem = await dbTable.get(remoteItem.id)
                     const remoteData = toCamelCase(remoteItem)
 
-                    // Version control: Last Write Wins based on version number or updated_at
+                    // Version control: Last Write Wins based on updated_at
+                    // If local has newer version/updatedAt pending sync, don't overwrite?
+                    // But we are manual sync. If pulling, we assume server is truth.
+                    // However, if we have pending local changes, we should probably NOT overwrite them until we push?
+                    // Strategy: "Prioritize Supabase as single source of truth".
+                    // If we have pending local changes for this ID, we might have a conflict.
+                    // For V1, "Last Write Wins". If server is newer, taking server.
+                    // But if local is pending, it might be newer than server (but not pushed).
+                    // If we overwrite local pending with server (which matches old local state), we lose the mutation.
+                    // BUT our mutation is stored in `offline_mutations`!
+                    // So even if we overwrite the Entity table, the Mutation Queue still has the pending operation.
+                    // When we push, we will re-apply the mutation to server and then server will send back the final state.
+                    // So it is SAFE to overwrite Entity table because `offline_mutations` is the intent source of truth for "My Pending Changes".
+
                     if (!localItem || localItem.version < (remoteData as any).version) {
                         await dbTable.put({
                             ...remoteData,
@@ -235,38 +279,20 @@ export async function pullChanges(workspaceId: string, lastSyncTime: string | nu
     return { pulled: totalPulled }
 }
 
-// Full sync - push then pull
+// Full sync - Process queue then pull
 export async function fullSync(userId: string, workspaceId: string, lastSyncTime: string | null): Promise<SyncResult> {
     console.log(`[Sync] fullSync START for User ${userId}, Workspace ${workspaceId}`)
-    const errors: string[] = []
 
-    try {
-        // Push first
-        console.log('[Sync] fullSync: Starting push phase...')
-        const { success: pushed, failed } = await pushChanges(userId, workspaceId)
-        if (failed > 0) {
-            errors.push(`Failed to push ${failed} items`)
-        }
+    // 1. Process Offline Mutations
+    const { success, failed, error } = await processMutationQueue(userId)
 
-        // Then pull
-        console.log('[Sync] fullSync: Starting pull phase...')
-        const { pulled } = await pullChanges(workspaceId, lastSyncTime)
+    // 2. Pull Changes (Force pull to ensure consistency)
+    const { pulled } = await pullChanges(workspaceId, lastSyncTime)
 
-        const finalResult = {
-            success: errors.length === 0,
-            pushed,
-            pulled,
-            errors
-        }
-        console.log('[Sync] fullSync COMPLETE:', finalResult)
-        return finalResult
-    } catch (err: any) {
-        console.error('[Sync] fullSync CRITICAL ERROR:', err.message || err)
-        return {
-            success: false,
-            pushed: 0,
-            pulled: 0,
-            errors: [err.message || 'Unknown sync error']
-        }
+    return {
+        success: failed === 0,
+        pushed: success,
+        pulled,
+        errors: error ? [error] : []
     }
 }

@@ -6,7 +6,6 @@ import { useAuth } from '@/auth/AuthContext'
 import { fullSync, type SyncState } from './syncEngine'
 import { isSupabaseConfigured } from '@/auth/supabase'
 
-const SYNC_INTERVAL = 30000 // 30 seconds
 const LAST_SYNC_KEY = 'erp_last_sync_time'
 
 export interface UseSyncStatusResult {
@@ -39,12 +38,10 @@ export function useSyncStatus(): UseSyncStatusResult {
         lastSyncTimeRef.current = lastSyncTime
     }, [lastSyncTime])
 
-    // Get pending sync count
-    const pendingCount = useLiveQuery(() => db.syncQueue.count(), []) ?? 0
-    // Track previous pending count to detect new additions
-    const prevPendingCount = useRef(pendingCount)
+    // Get pending sync count from offline_mutations
+    const pendingCount = useLiveQuery(() => db.offline_mutations.where('status').equals('pending').count(), []) ?? 0
 
-    // Perform sync
+    // Perform sync (now manual mostly)
     const sync = useCallback(async () => {
         if (!isSupabaseConfigured || !isAuthenticated || !user || syncInProgress.current) {
             return
@@ -80,44 +77,11 @@ export function useSyncStatus(): UseSyncStatusResult {
             console.error('[SyncHook] UNEXPECTED SYNC ERROR:', error)
             setSyncState('error')
         } finally {
-            console.log('[SyncHook] Releasing syncInProgress lock')
             syncInProgress.current = false
         }
     }, [isOnline, isAuthenticated, user]) // Removed lastSyncTime from deps
 
-    // Auto sync on interval
-    useEffect(() => {
-        if (!isSupabaseConfigured || !isAuthenticated || !isOnline) return
-
-        const interval = setInterval(sync, SYNC_INTERVAL)
-        return () => clearInterval(interval)
-    }, [sync, isAuthenticated, isOnline])
-
-    // Sync when coming back online
-    useEffect(() => {
-        if (isOnline && isAuthenticated) {
-            // Only sync if we haven't synced in a while or have pending items? 
-            // Ideally just one sync check on connection restore is good.
-            console.log('[SyncHook] Online status restored, triggering sync...')
-            sync()
-        }
-    }, [isOnline, isAuthenticated]) // Removed pendingCount and sync from here to prevent loops
-
-    // Trigger sync when new items are added to queue (pendingCount increases)
-    useEffect(() => {
-        if (pendingCount > prevPendingCount.current && isOnline && isAuthenticated) {
-            console.log('[SyncHook] New items added to queue, triggering sync...')
-            sync()
-        }
-        prevPendingCount.current = pendingCount
-    }, [pendingCount, isOnline, isAuthenticated])
-
-    // Initial sync
-    useEffect(() => {
-        if (isAuthenticated && isOnline) {
-            sync()
-        }
-    }, [isAuthenticated]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Manual Sync System: No auto-syncing on interval or pending count changes.
 
     return {
         syncState,

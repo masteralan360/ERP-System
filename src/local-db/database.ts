@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Product, Category, Customer, Order, Invoice, User, SyncQueueItem, Sale, SaleItem } from './models'
+import type { Product, Category, Customer, Order, Invoice, User, SyncQueueItem, Sale, SaleItem, OfflineMutation } from './models'
 
 // ERP Database using Dexie.js for IndexedDB
 export class ERPDatabase extends Dexie {
@@ -12,6 +12,7 @@ export class ERPDatabase extends Dexie {
     sales!: EntityTable<Sale, 'id'>
     sale_items!: EntityTable<SaleItem, 'id'>
     syncQueue!: EntityTable<SyncQueueItem, 'id'>
+    offline_mutations!: EntityTable<OfflineMutation, 'id'>
 
     constructor() {
         super('ERPDatabase')
@@ -25,7 +26,8 @@ export class ERPDatabase extends Dexie {
             users: 'id, email, role, workspaceId, syncStatus, updatedAt, isDeleted',
             sales: 'id, cashierId, workspaceId, syncStatus, createdAt',
             sale_items: 'id, saleId, productId',
-            syncQueue: 'id, entityType, entityId, operation, timestamp'
+            syncQueue: 'id, entityType, entityId, operation, timestamp',
+            offline_mutations: 'id, workspaceId, entityType, entityId, status, createdAt'
         })
     }
 }

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
 import { supabase } from '@/auth/supabase'
-import { useProducts, type Product } from '@/local-db'
+import { addToOfflineMutations, useProducts, type Product } from '@/local-db'
 import { db } from '@/local-db/database'
 import { formatCurrency, generateId } from '@/lib/utils'
 import { CartItem } from '@/types'
@@ -31,7 +31,6 @@ import {
     Camera,
     Settings as SettingsIcon
 } from 'lucide-react'
-import { addToQueue } from '@/sync/syncQueue'
 import { BarcodeScanner } from 'react-barcode-scanner'
 import 'react-barcode-scanner/polyfill'
 
@@ -305,7 +304,8 @@ export function POS() {
                     }))
 
                     // 4. Add to Sync Queue
-                    await addToQueue('sales', saleId, 'create', checkoutPayload)
+                    // 4. Add to Sync Queue
+                    await addToOfflineMutations('sales', saleId, 'create', checkoutPayload, user.workspaceId)
 
                     // Success Feedback
                     setCart([])
