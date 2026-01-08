@@ -270,6 +270,13 @@
         "messages": {
             "clearQueueConfirm": "مسح جميع عناصر المزامنة المعلقة؟ لا يمكن التراجع عن هذا الإجراء.",
             "clearDataConfirm": "سيؤدي هذا إلى حذف جميع البيانات المحلية بما في ذلك المنتجات والعملاء والطلبات والفواتير. هل أنت متأكد؟"
+        },
+        "pos": {
+            "title": "إعدادات نقطة البيع",
+            "hotkey": "مفتاح اختصار SKU",
+            "hotkeyDesc": "اضغط على هذا المفتاح لفتح نافذة SKU في نقطة البيع.",
+            "barcodeHotkey": "مفتاح اختصار الباركود",
+            "barcodeHotkeyDesc": "اضغط على هذا المفتاح لفتح ماسح الباركود في نقطة البيع."
         }
     },
     "members": {
@@ -304,7 +311,14 @@
         "checkout": "إتمام البيع",
         "enterSku": "أدخل SKU",
         "skuNotFound": "المنتج غير موجود",
-        "sku": "SKU"
+        "sku": "SKU",
+        "barcodeScanner": "ماسح الباركود",
+        "autoScanner": "المسح التلقائي",
+        "selectCamera": "اختر الكاميرا",
+        "scannerEnabled": "الماسح مفعل",
+        "scannerDisabled": "الماسح معطل",
+        "cameraNotFound": "لم يتم العثور على كاميرا",
+        "permissionDenied": "تم رفض الوصول للكاميرا"
     },
     "sales": {
         "title": "سجل المبيعات",

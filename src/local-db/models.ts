@@ -36,6 +36,7 @@ export interface Product extends BaseEntity {
     quantity: number
     minStockLevel: number
     unit: string
+    barcode?: string
     imageUrl?: string
 }
 

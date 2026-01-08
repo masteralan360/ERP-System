@@ -60,5 +60,26 @@ export default defineConfig({
         alias: {
             '@': path.resolve(__dirname, './src')
         }
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-supabase': ['@supabase/supabase-js'],
+                    'vendor-db': ['dexie', 'dexie-react-hooks'],
+                    'vendor-react': ['react', 'react-dom', 'wouter', 'i18next', 'react-i18next'],
+                    'vendor-ui': [
+                        '@radix-ui/react-dialog',
+                        '@radix-ui/react-dropdown-menu',
+                        '@radix-ui/react-select',
+                        '@radix-ui/react-switch',
+                        '@radix-ui/react-tabs',
+                        '@radix-ui/react-toast',
+                        'lucide-react'
+                    ]
+                }
+            }
+        },
+        chunkSizeWarningLimit: 1000
     }
 })

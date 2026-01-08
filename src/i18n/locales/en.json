@@ -273,9 +273,11 @@
             "clearDataConfirm": "This will delete ALL local data including products, customers, orders, and invoices. Are you sure?"
         },
         "pos": {
-            "title": "Clear all pending sync items? This cannot be undone.",
-            "hotkey": "Hotkey",
-            "hotkeyDesc": "Press this key to open the SKU modal in POS."
+            "title": "POS Configuration",
+            "hotkey": "SKU Shortcut Key",
+            "hotkeyDesc": "Press this key to open the SKU modal in POS.",
+            "barcodeHotkey": "Barcode Shortcut Key",
+            "barcodeHotkeyDesc": "Press this key to open the Barcode Scanner in POS."
         }
     },
     "members": {
@@ -312,7 +314,14 @@
         "offlineDesc": "Sale saved locally and will sync when online.",
         "enterSku": "Enter SKU",
         "skuNotFound": "Product not found",
-        "sku": "SKU"
+        "sku": "SKU",
+        "barcodeScanner": "Barcode Scanner",
+        "autoScanner": "Automatic Scanner",
+        "selectCamera": "Select Camera",
+        "scannerEnabled": "Scanner Enabled",
+        "scannerDisabled": "Scanner Disabled",
+        "cameraNotFound": "Camera not found",
+        "permissionDenied": "Camera permission denied"
     },
     "sales": {
         "title": "Sales History",

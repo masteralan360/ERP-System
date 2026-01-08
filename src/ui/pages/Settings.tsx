@@ -16,11 +16,18 @@ export function Settings() {
     const { t } = useTranslation()
     const [copied, setCopied] = useState(false)
     const [posHotkey, setPosHotkey] = useState(localStorage.getItem('pos_hotkey') || 'p')
+    const [barcodeHotkey, setBarcodeHotkey] = useState(localStorage.getItem('barcode_hotkey') || 'k')
 
     const handleHotkeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.slice(0, 1).toLowerCase()
         setPosHotkey(val)
         localStorage.setItem('pos_hotkey', val)
+    }
+
+    const handleBarcodeHotkeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.slice(0, 1).toLowerCase()
+        setBarcodeHotkey(val)
+        localStorage.setItem('barcode_hotkey', val)
     }
 
     const copyToClipboard = (text: string) => {
@@ -251,12 +258,12 @@ export function Settings() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <CreditCard className="w-5 h-5" />
-                        {t('settings.pos.title') || 'POS Configuration'}
+                        {t('settings.pos.title')}
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
                     <div className="space-y-2">
-                        <Label>{t('settings.pos.hotkey') || 'SKU Shortcut Key'}</Label>
+                        <Label>{t('settings.pos.hotkey')}</Label>
                         <Input
                             value={posHotkey}
                             onChange={handleHotkeyChange}
@@ -264,7 +271,20 @@ export function Settings() {
                             className="w-20 text-center font-mono uppercase"
                         />
                         <p className="text-sm text-muted-foreground">
-                            {t('settings.pos.hotkeyDesc') || 'Press this key to open the SKU modal in POS.'}
+                            {t('settings.pos.hotkeyDesc')}
+                        </p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>{t('settings.pos.barcodeHotkey')}</Label>
+                        <Input
+                            value={barcodeHotkey}
+                            onChange={handleBarcodeHotkeyChange}
+                            maxLength={1}
+                            className="w-20 text-center font-mono uppercase"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                            {t('settings.pos.barcodeHotkeyDesc')}
                         </p>
                     </div>
                 </CardContent>

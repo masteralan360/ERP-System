@@ -4,7 +4,7 @@ import { useAuth } from '@/auth'
 import { supabase } from '@/auth/supabase'
 import { useProducts, type Product } from '@/local-db'
 import { db } from '@/local-db/database'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, generateId } from '@/lib/utils'
 import { CartItem } from '@/types'
 import {
     Button,
@@ -14,7 +14,9 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
-    useToast
+    useToast,
+    Label,
+    Switch
 } from '@/ui/components'
 import {
     Search,
@@ -25,10 +27,13 @@ import {
     CreditCard,
     Zap,
     Loader2,
-    Barcode
+    Barcode,
+    Camera,
+    Settings as SettingsIcon
 } from 'lucide-react'
-import { generateId } from '@/lib/utils'
 import { addToQueue } from '@/sync/syncQueue'
+import { BarcodeScanner } from 'react-barcode-scanner'
+import 'react-barcode-scanner/polyfill'
 
 export function POS() {
     const { toast } = useToast()
@@ -40,6 +45,12 @@ export function POS() {
     const [isSkuModalOpen, setIsSkuModalOpen] = useState(false)
     const [skuInput, setSkuInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false)
+    const [isScannerAutoEnabled, setIsScannerAutoEnabled] = useState(() => {
+        return localStorage.getItem('scanner_auto_enabled') === 'true'
+    })
+    const [selectedCameraId, setSelectedCameraId] = useState(localStorage.getItem('scanner_camera_id') || '')
+    const [cameras, setCameras] = useState<MediaDeviceInfo[]>([])
     const skuInputRef = useRef<HTMLInputElement>(null)
 
     // Filter products
@@ -56,15 +67,36 @@ export function POS() {
     // Hotkey listener
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            const hotkey = localStorage.getItem('pos_hotkey') || 'p'
-            if (e.key.toLowerCase() === hotkey.toLowerCase() && !isSkuModalOpen) {
+            const skuHotkey = localStorage.getItem('pos_hotkey') || 'p'
+            const barcodeHotkey = localStorage.getItem('barcode_hotkey') || 'k'
+
+            if (e.key.toLowerCase() === skuHotkey.toLowerCase() && !isSkuModalOpen && !isBarcodeModalOpen) {
                 e.preventDefault()
                 setIsSkuModalOpen(true)
+            }
+            if (e.key.toLowerCase() === barcodeHotkey.toLowerCase() && !isBarcodeModalOpen && !isSkuModalOpen) {
+                e.preventDefault()
+                setIsBarcodeModalOpen(true)
             }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [isSkuModalOpen])
+    }, [isSkuModalOpen, isBarcodeModalOpen])
+
+    // Fetch cameras
+    useEffect(() => {
+        if (isBarcodeModalOpen) {
+            navigator.mediaDevices.enumerateDevices().then(devices => {
+                const videoDevices = devices.filter(d => d.kind === 'videoinput')
+                setCameras(videoDevices)
+                if (!selectedCameraId && videoDevices.length > 0) {
+                    setSelectedCameraId(videoDevices[0].deviceId)
+                }
+            }).catch(err => {
+                console.error('Error listing cameras:', err)
+            })
+        }
+    }, [isBarcodeModalOpen, selectedCameraId])
 
     // Focus SKU input when modal opens
     useEffect(() => {
@@ -128,9 +160,43 @@ export function POS() {
             addToCart(product)
             setSkuInput('')
             setIsSkuModalOpen(false)
+            toast({
+                title: t('messages.success'),
+                description: `${product.name} ${t('common.added')}`,
+                duration: 2000,
+            })
         } else {
-            // Optional: Show feedback
-            alert(t('pos.skuNotFound') || 'Product not found')
+            toast({
+                variant: 'destructive',
+                title: t('messages.error'),
+                description: t('pos.skuNotFound') || 'Product not found',
+            })
+        }
+    }
+
+    const handleBarcodeDetected = (barcodes: any[]) => {
+        if (!isScannerAutoEnabled || barcodes.length === 0) return
+        const text = barcodes[0].rawValue
+
+        const product = products.find((p) =>
+            (p.barcode && p.barcode === text) ||
+            p.sku.toLowerCase() === text.toLowerCase()
+        )
+
+        if (product) {
+            addToCart(product)
+            toast({
+                title: t('messages.success'),
+                description: `${product.name} ${t('common.added')}`,
+                duration: 2000,
+            })
+        } else {
+            toast({
+                variant: 'destructive',
+                title: t('messages.error'),
+                description: `${t('pos.skuNotFound')}: ${text}`,
+                duration: 2000,
+            })
         }
     }
 
@@ -264,14 +330,25 @@ export function POS() {
                             className="pl-10 h-12 text-lg"
                         />
                     </div>
-                    <Button
-                        variant="outline"
-                        className="h-12 w-12 rounded-xl"
-                        onClick={() => setIsSkuModalOpen(true)}
-                        title="Scan SKU (Hotkey: P)"
-                    >
-                        <Barcode className="w-5 h-5" />
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            className="h-12 w-12 rounded-xl relative overflow-hidden"
+                            onClick={() => setIsSkuModalOpen(true)}
+                            title="Scan SKU (Hotkey: P)"
+                        >
+                            <Barcode className="w-5 h-5" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="h-12 px-4 rounded-xl relative flex items-center gap-2"
+                            onClick={() => setIsBarcodeModalOpen(true)}
+                            title="Barcode Scanner (Hotkey: K)"
+                        >
+                            <Camera className="w-5 h-5" />
+                            <div className={`w-2.5 h-2.5 rounded-full ${isScannerAutoEnabled ? 'bg-emerald-500' : 'bg-red-500'} border border-background shadow-sm`} />
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-2">
@@ -393,6 +470,89 @@ export function POS() {
                     </Button>
                 </div>
             </div>
+
+            {/* Barcode Scanner Modal */}
+            <Dialog open={isBarcodeModalOpen} onOpenChange={setIsBarcodeModalOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Camera className="w-5 h-5 text-primary" />
+                            {t('pos.barcodeScanner')}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-6 py-4">
+                        {/* Scanner View */}
+                        <div className="relative aspect-video bg-muted rounded-xl overflow-hidden border border-border shadow-inner group">
+                            {isScannerAutoEnabled ? (
+                                <BarcodeScanner
+                                    onCapture={handleBarcodeDetected}
+                                    trackConstraints={{ deviceId: selectedCameraId }}
+                                />
+                            ) : (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-muted/50">
+                                    <Camera className="w-12 h-12 opacity-20 mb-2" />
+                                    <p className="font-medium">{t('pos.scannerDisabled')}</p>
+                                </div>
+                            )}
+
+                            {/* Scanner Overlay */}
+                            {isScannerAutoEnabled && (
+                                <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-primary/50 shadow-[0_0_15px_rgba(var(--primary),0.5)] animate-pulse" />
+                            )}
+                        </div>
+
+                        {/* Controls */}
+                        <div className="grid gap-6 md:grid-cols-2">
+                            <div className="space-y-4 p-4 rounded-xl bg-muted/30 border border-border">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-base">{t('pos.autoScanner')}</Label>
+                                        <p className="text-xs text-muted-foreground">Continuously scan codes</p>
+                                    </div>
+                                    <Switch
+                                        checked={isScannerAutoEnabled}
+                                        onCheckedChange={(val) => {
+                                            setIsScannerAutoEnabled(val)
+                                            localStorage.setItem('scanner_auto_enabled', String(val))
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium flex items-center gap-2">
+                                    <SettingsIcon className="w-4 h-4" />
+                                    {t('pos.selectCamera')}
+                                </Label>
+                                <select
+                                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    value={selectedCameraId}
+                                    onChange={(e) => {
+                                        setSelectedCameraId(e.target.value)
+                                        localStorage.setItem('scanner_camera_id', e.target.value)
+                                    }}
+                                >
+                                    {cameras.map((camera) => (
+                                        <option key={camera.deviceId} value={camera.deviceId}>
+                                            {camera.label || `Camera ${camera.deviceId.slice(0, 5)}`}
+                                        </option>
+                                    ))}
+                                    {cameras.length === 0 && (
+                                        <option value="">{t('pos.cameraNotFound')}</option>
+                                    )}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsBarcodeModalOpen(false)}>
+                            {t('common.cancel')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* SKU Modal */}
             <Dialog open={isSkuModalOpen} onOpenChange={setIsSkuModalOpen}>
