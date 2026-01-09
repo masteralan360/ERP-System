@@ -2,7 +2,7 @@ import { Route, Switch } from 'wouter'
 import { AuthProvider, ProtectedRoute, GuestRoute } from '@/auth'
 import { WorkspaceProvider } from '@/workspace'
 import { Layout, Toaster } from '@/ui/components'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 
 // Lazy load pages
 const Dashboard = lazy(() => import('@/ui/pages/Dashboard').then(m => ({ default: m.Dashboard })))
@@ -20,6 +20,20 @@ const POS = lazy(() => import('@/ui/pages/POS').then(m => ({ default: m.POS })))
 const Sales = lazy(() => import('@/ui/pages/Sales').then(m => ({ default: m.Sales })))
 const WorkspaceConfiguration = lazy(() => import('@/ui/pages/WorkspaceConfiguration').then(m => ({ default: m.WorkspaceConfiguration })))
 
+// Preload list for Electron
+const pages = [
+    () => import('@/ui/pages/Dashboard'),
+    () => import('@/ui/pages/Products'),
+    () => import('@/ui/pages/Customers'),
+    () => import('@/ui/pages/Orders'),
+    () => import('@/ui/pages/Invoices'),
+    () => import('@/ui/pages/POS'),
+    () => import('@/ui/pages/Sales'),
+    () => import('@/ui/pages/Settings'),
+    () => import('@/ui/pages/Members'),
+    () => import('@/ui/pages/WorkspaceConfiguration'),
+]
+
 function LoadingState() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-background">
@@ -31,7 +45,18 @@ function LoadingState() {
     )
 }
 
+
 function App() {
+    useEffect(() => {
+        // Detect Electron
+        const isElectron = /electron/i.test(navigator.userAgent)
+
+        if (isElectron) {
+            console.log('[Electron] Pre-loading all pages for snappy navigation...')
+            pages.forEach(load => load())
+        }
+    }, [])
+
     return (
         <AuthProvider>
             <WorkspaceProvider>

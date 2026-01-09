@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './database'
-import type { Product, Category, Customer, Order, Invoice, SyncQueueItem, OfflineMutation } from './models'
+import type { Product, Category, Customer, Order, Invoice, OfflineMutation } from './models'
 import { generateId, toSnakeCase, toCamelCase } from '@/lib/utils'
 import { supabase } from '@/auth/supabase'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -798,40 +798,6 @@ export async function addToOfflineMutations(
         createdAt: new Date().toISOString(),
         status: 'pending'
     })
-}
-
-// Deprecated: Old sync queue (will be removed)
-async function addToSyncQueue(
-    entityType: SyncQueueItem['entityType'],
-    entityId: string,
-    operation: SyncQueueItem['operation'],
-    data: Record<string, unknown>
-): Promise<void> {
-    // Check if there's already an item for this entity
-    const existing = await db.syncQueue
-        .where('entityId')
-        .equals(entityId)
-        .first()
-
-    if (existing) {
-        // Update existing queue item
-        await db.syncQueue.update(existing.id, {
-            operation: existing.operation === 'create' ? 'create' : operation,
-            data,
-            timestamp: new Date().toISOString()
-        })
-    } else {
-        // Add new queue item
-        await db.syncQueue.add({
-            id: generateId(),
-            entityType,
-            entityId,
-            operation,
-            data,
-            timestamp: new Date().toISOString(),
-            retryCount: 0
-        })
-    }
 }
 
 export async function removeFromSyncQueue(id: string): Promise<void> {

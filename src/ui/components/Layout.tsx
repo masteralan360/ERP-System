@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, Suspense } from 'react'
 import { Link, useLocation } from 'wouter'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/auth'
@@ -92,6 +92,7 @@ export function Layout({ children }: LayoutProps) {
             { name: t('nav.settings'), href: '/settings', icon: Settings }
         ] : []),
     ]
+
 
     return (
         <div className="min-h-screen bg-background">
@@ -255,9 +256,20 @@ export function Layout({ children }: LayoutProps) {
 
                 {/* Page content */}
                 <main className="p-4 lg:p-6">
-                    {children}
+                    <Suspense fallback={<PageLoading />}>
+                        {children}
+                    </Suspense>
                 </main>
             </div>
+        </div>
+    )
+}
+
+function PageLoading() {
+    return (
+        <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground animate-pulse font-medium">Loading Page...</p>
         </div>
     )
 }

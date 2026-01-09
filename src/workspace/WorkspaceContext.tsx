@@ -28,7 +28,7 @@ const defaultFeatures: WorkspaceFeatures = {
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined)
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-    const { user, isAuthenticated } = useAuth()
+    const { user, isAuthenticated, isLoading: authLoading } = useAuth()
     const [features, setFeatures] = useState<WorkspaceFeatures>(defaultFeatures)
     const [isLoading, setIsLoading] = useState(true)
 
@@ -64,13 +64,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
 
     useEffect(() => {
+        if (authLoading) return
+
         if (isAuthenticated && user?.workspaceId) {
             fetchFeatures()
         } else {
             setFeatures(defaultFeatures)
             setIsLoading(false)
         }
-    }, [isAuthenticated, user?.workspaceId])
+    }, [isAuthenticated, user?.workspaceId, authLoading])
 
     const hasFeature = (feature: keyof Omit<WorkspaceFeatures, 'is_configured'>): boolean => {
         return features[feature] ?? false
