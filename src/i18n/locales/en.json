@@ -300,11 +300,14 @@
             "primary": "Primary Source USD/IQD",
             "primaryDesc": "Select which website to use for live market rates.",
             "xeiqd": "XEIQD USD/IQD (Slower & More Accurate)",
-            "egcurrency": "EgCurrency USD/IQD (Faster & More Reliable)",
+            "forexfy": "Forexfy USD/IQD (Faster & More Reliable)",
+            "forexfy_eur": "Forexfy EUR/IQD (Faster & More Reliable)",
+            "dolardinar": "DolarDinar.com USD/IQD (Market Sheet)",
+            "dolardinar_eur": "DolarDinar.com EUR/IQD (Market Sheet)",
             "eurEnable": "Enable EUR/IQD Exchange Rate",
             "eurEnableDesc": "Enable EUR/IQD exchange rate in the system.",
             "eurSource": "EUR/IQD Source",
-            "eurSourceAdminOnly": "EgCurrency is currently the only supported source for Euro rates."
+            "eurSourceAdminOnly": "Forexfy and DolarDinar are currently the supported sources for Euro rates."
         }
     },
     "sync": {

@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
         // If specific page fails, try the home page fallback
         if (!response.ok && cleanPath !== '/en') {
-            console.warn(`[EgCurrency Proxy] Path ${cleanPath} failed (${response.status}), trying home page...`);
+            console.warn(`[Forexfy Proxy] Path ${cleanPath} failed (${response.status}), trying home page...`);
             response = await fetch('https://forexfy.app/en', fetchOptions);
         }
 
@@ -38,14 +38,14 @@ export default async function handler(req, res) {
         console.log(`[Forexfy Proxy] Final Status: ${response.status} - Content Length: ${data.length}`);
 
         if (data.includes('cf-browser-verification') || data.includes('Checking your browser')) {
-            console.error('[EgCurrency Proxy] Blocked by Cloudflare JS Challenge');
+            console.error('[Forexfy Proxy] Blocked by Cloudflare JS Challenge');
         }
 
         res.setHeader('Content-Type', 'text/html');
         res.setHeader('Cache-Control', 'no-store, max-age=0');
         res.status(response.status).send(data);
     } catch (error) {
-        console.error('[EgCurrency Proxy] Fatal Error:', error.message);
+        console.error('[Forexfy Proxy] Fatal Error:', error.message);
         res.status(200).send(`<!-- Error: ${error.message} --><html><body>Rate Error</body></html>`);
     }
 }

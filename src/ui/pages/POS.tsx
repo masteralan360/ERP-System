@@ -110,7 +110,7 @@ export function POS() {
             const r1 = getRate('usd_iqd'); const r2 = getRate('usd_eur')
             if (r1 && r2) converted = (amount / r1) * r2
         } else if (from === 'eur' && to === 'iqd') {
-            // we have direct EUR/IQD now from egcurrency
+            // we have direct EUR/IQD now from forexfy
         }
 
         // Rounding rules

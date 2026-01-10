@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { fetchUSDToIQDRate, fetchEgRate, type ExchangeRateResult } from '@/lib/exchangeRate'
+import { fetchUSDToIQDRate, fetchEURToIQDRate, type ExchangeRateResult } from '@/lib/exchangeRate'
 import { useWorkspace } from '@/workspace'
 
 export interface ExchangeSnapshot {
@@ -40,16 +40,17 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
 
             // 2. Fetch EUR rates if enabled
             if (features.eur_conversion_enabled) {
-                const timestamp = new Date().toISOString()
-                const [usdEurRate, eurIqdRate] = await Promise.all([
-                    fetchEgRate('USD-to-EUR'),
-                    fetchEgRate('EUR-to-IQD')
-                ])
+                try {
+                    const eurResult = await fetchEURToIQDRate()
+                    const timestamp = new Date().toISOString()
 
-                setEurRates({
-                    usd_eur: { rate: usdEurRate, source: 'egcurrency', timestamp },
-                    eur_iqd: { rate: eurIqdRate, source: 'egcurrency', timestamp }
-                })
+                    setEurRates({
+                        usd_eur: { rate: eurResult.usdEur, source: eurResult.source, timestamp },
+                        eur_iqd: { rate: eurResult.eurIqd, source: eurResult.source, timestamp }
+                    })
+                } catch (error) {
+                    console.error('ExchangeRateProvider: Failed to fetch EUR rates', error)
+                }
             }
 
             setStatus('live')

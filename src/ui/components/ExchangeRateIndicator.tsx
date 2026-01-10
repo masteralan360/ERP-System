@@ -57,7 +57,7 @@ export function ExchangeRateIndicator() {
 
                 {status === 'live' && exchangeData?.isFallback && (
                     <span className="text-xs opacity-70 font-normal ml-1">
-                        ({exchangeData.source === 'xeiqd' ? 'XEIQD' : 'EgCurrency'})
+                        ({exchangeData.source === 'xeiqd' ? 'XEIQD' : 'Forexfy'})
                     </span>
                 )}
             </div>

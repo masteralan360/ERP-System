@@ -67,10 +67,10 @@ export default defineConfig({
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 }
             },
-            '/api-egcurrency': {
+            '/api-forexfy': {
                 target: 'https://forexfy.app',
                 changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api-egcurrency/, ''),
+                rewrite: (path) => path.replace(/^\/api-forexfy/, ''),
                 headers: {
                     'Referer': 'https://forexfy.app',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'

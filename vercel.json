@@ -9,12 +9,12 @@
             "destination": "/api/xeiqd"
         },
         {
-            "source": "/api-egcurrency/(.*)",
-            "destination": "/api/egcurrency?path=$1"
+            "source": "/api-forexfy/(.*)",
+            "destination": "/api/forexfy?path=$1"
         },
         {
-            "source": "/api-egcurrency",
-            "destination": "/api/egcurrency"
+            "source": "/api-forexfy",
+            "destination": "/api/forexfy"
         },
         {
             "source": "/(.*)",

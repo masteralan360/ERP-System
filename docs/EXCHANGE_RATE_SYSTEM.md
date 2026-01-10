@@ -6,7 +6,7 @@ The ERP System includes a robust, client-side live exchange rate integration for
 
 - **Purpose**: Fetch real-time USD to IQD market rates for accurate pricing and sales.
 - **Architecture**: Pure client-side scraping with a Vite-based development proxy to bypass CORS.
-- **Reliability**: Dual-source system (Source 1: XEIQD, Source 2: EgCurrency) with automatic fallback.
+- **Reliability**: Triple-source system (XEIQD, Forexfy, DolarDinar) with automatic fallback.
 - **Persistence**: User preferences (Primary Source) are stored in `localStorage`.
 
 ## Data Sources
@@ -19,8 +19,8 @@ The ERP System includes a robust, client-side live exchange rate integration for
     - If specific location data is missing, it falls back to parsing a `cachedData` JSON snippet embedded in the page's scripts.
 - **Transformation**: Values are converted to float, multiplied by 100, and rounded to the nearest integer.
 
-### 2. EgCurrency (egcurrency.com)
-- **Label**: `EgCurrency USD/IQD (Faster & More Reliable)`
+### 2. Forexfy (forexfy.app)
+- **Label**: `Forexfy USD/IQD (Faster & More Reliable)`
 - **Nature**: Provides "Black Market" / Parallel Market rates.
 - **Scraping Logic**:
     - Primary: Extracts data from a serialized `const rates` JSON object found in a script tag.
@@ -29,21 +29,21 @@ The ERP System includes a robust, client-side live exchange rate integration for
 
 ## Implementation Details
 
-### CORS Workaround (Vite Proxy)
-Since the app runs entirely in the browser and both sources lack CORS headers for public API access, the `vite.config.ts` includes proxy rules to route requests through the development server:
+### CORS Workaround (Vercel/Vite Proxy)
+Since the app runs entirely in the browser and both sources lack CORS headers for public API access, the system includes proxy rules to route requests:
 
 ```typescript
-// vite.config.ts
+// vite.config.ts / vercel.json
 proxy: {
   '/api-xeiqd': {
     target: 'https://xeiqd.com',
     changeOrigin: true,
     rewrite: (path) => path.replace(/^\/api-xeiqd/, ''),
   },
-  '/api-egcurrency': {
-    target: 'https://egcurrency.com',
+  '/api-forexfy': {
+    target: 'https://forexfy.app',
     changeOrigin: true,
-    rewrite: (path) => path.replace(/^\/api-egcurrency/, ''),
+    rewrite: (path) => path.replace(/^\/api-forexfy/, ''),
   }
 }
 ```
@@ -59,9 +59,9 @@ The system allows users to select a **Primary Source** in Settings.
 graph TD
     A[Start Fetch] --> B{Primary Selected?}
     B -->|XEIQD| C[Try XEIQD]
-    B -->|EgCurrency| D[Try EgCurrency]
+    B -->|Forexfy| D[Try Forexfy]
     C -->|Success| E[Return Result]
-    C -->|Fail| F[Try EgCurrency - Fallback]
+    C -->|Fail| F[Try Forexfy - Fallback]
     D -->|Success| E
     D -->|Fail| G[Try XEIQD - Fallback]
     F -->|Success| E
@@ -76,11 +76,11 @@ graph TD
 - Displays current rate as `USD/IQD: 145,395`.
 - Includes a **Pulsing Green Circle** to indicate "Live" status.
 - **Refresh Time**: Shows the last successful sync time in `HH:MM` format.
-- **Fallback Indicator**: If the system is currently using the fallback source, its name (e.g., `(EgCurrency)`) is displayed to the right of the pulsing circle.
+- **Fallback Indicator**: If the system is currently using the fallback source, its name (e.g., `(Forexfy)`) is displayed to the right of the pulsing circle.
 - **Manual Refresh**: A button to manually trigger a re-fetch.
 
 ### `Settings` (General Tab)
-- **Primary Source Selection**: A dropdown to choose between XEIQD and EgCurrency.
+- **Primary Source Selection**: A dropdown to choose between XEIQD and Forexfy.
 - **Instant Sync**: Changing the setting dispatches a custom `exchange-rate-refresh` event, which the `ExchangeRateIndicator` listens for to update immediately.
 
 ## Key Files

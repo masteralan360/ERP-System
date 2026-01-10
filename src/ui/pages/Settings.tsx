@@ -22,6 +22,7 @@ export function Settings() {
     const [posHotkey, setPosHotkey] = useState(localStorage.getItem('pos_hotkey') || 'p')
     const [barcodeHotkey, setBarcodeHotkey] = useState(localStorage.getItem('barcode_hotkey') || 'k')
     const [exchangeRateSource, setExchangeRateSource] = useState(localStorage.getItem('primary_exchange_rate_source') || 'xeiqd')
+    const [eurExchangeRateSource, setEurExchangeRateSource] = useState(localStorage.getItem('primary_eur_exchange_rate_source') || 'forexfy')
 
     const handleHotkeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.slice(0, 1).toLowerCase()
@@ -39,6 +40,12 @@ export function Settings() {
         setExchangeRateSource(val)
         localStorage.setItem('primary_exchange_rate_source', val)
         // Notify the indicator to refresh instantly
+        window.dispatchEvent(new CustomEvent('exchange-rate-refresh'))
+    }
+
+    const handleEurExchangeRateSourceChange = (val: string) => {
+        setEurExchangeRateSource(val)
+        localStorage.setItem('primary_eur_exchange_rate_source', val)
         window.dispatchEvent(new CustomEvent('exchange-rate-refresh'))
     }
 
@@ -197,8 +204,11 @@ export function Settings() {
                                             <SelectItem value="xeiqd">
                                                 {t('settings.exchangeRate.xeiqd') || 'xeiqd.com / Sulaymaniyah'}
                                             </SelectItem>
-                                            <SelectItem value="egcurrency">
-                                                {t('settings.exchangeRate.egcurrency') || 'egcurrency.com / Black Market'}
+                                            <SelectItem value="forexfy">
+                                                {t('settings.exchangeRate.forexfy') || 'Forexfy.app / Black Market'}
+                                            </SelectItem>
+                                            <SelectItem value="dolardinar">
+                                                {t('settings.exchangeRate.dolardinar') || 'DolarDinar.com / Market Sheet'}
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -222,18 +232,21 @@ export function Settings() {
                                     {features.eur_conversion_enabled && (
                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
                                             <Label>{t('settings.exchangeRate.eurSource') || 'Euro Exchange Source'}</Label>
-                                            <Select value="egcurrency">
+                                            <Select value={eurExchangeRateSource} onValueChange={handleEurExchangeRateSourceChange}>
                                                 <SelectTrigger>
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="egcurrency">
-                                                        {t('settings.exchangeRate.egcurrency') || 'egcurrency.com / Black Market'}
+                                                    <SelectItem value="forexfy">
+                                                        {t('settings.exchangeRate.forexfy_eur') || 'Forexfy EUR/IQD (Faster & More Reliable)'}
+                                                    </SelectItem>
+                                                    <SelectItem value="dolardinar">
+                                                        {t('settings.exchangeRate.dolardinar_eur') || 'DolarDinar.com EUR/IQD (Market Sheet)'}
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <p className="text-[11px] text-muted-foreground italic">
-                                                {t('settings.exchangeRate.eurSourceAdminOnly') || 'EgCurrency is currently the only supported source for Euro rates.'}
+                                                {t('settings.exchangeRate.eurSourceAdminOnly') || 'Forexfy and DolarDinar are currently the supported sources for Euro rates.'}
                                             </p>
                                         </div>
                                     )}
