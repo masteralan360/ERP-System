@@ -21,7 +21,9 @@ import {
     UsersRound,
     CreditCard,
     Receipt,
-    TrendingUp
+    TrendingUp,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from './button'
@@ -37,7 +39,13 @@ export function Layout({ children }: LayoutProps) {
     const [location] = useLocation()
     const { user, signOut } = useAuth()
     const { hasFeature } = useWorkspace()
-    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+    const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('desktop_sidebar_open') !== 'false'
+        }
+        return true
+    })
     const [members, setMembers] = useState<{ id: string, name: string, role: string }[]>([])
     const { t } = useTranslation()
     const [logoError, setLogoError] = useState(false)
@@ -103,10 +111,10 @@ export function Layout({ children }: LayoutProps) {
     return (
         <div className="min-h-screen bg-background">
             {/* Mobile sidebar backdrop */}
-            {sidebarOpen && (
+            {mobileSidebarOpen && (
                 <div
                     className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-                    onClick={() => setSidebarOpen(false)}
+                    onClick={() => setMobileSidebarOpen(false)}
                 />
             )}
 
@@ -114,13 +122,13 @@ export function Layout({ children }: LayoutProps) {
             <aside
                 className={cn(
                     'fixed inset-y-0 z-50 w-64 bg-card transform transition-transform duration-300 ease-in-out',
-                    // Desktop: always show (ltr:translate-x-0, rtl:translate-x-0)
-                    'lg:translate-x-0 lg:rtl:translate-x-0',
+                    // Desktop state
+                    desktopSidebarOpen ? 'lg:translate-x-0 lg:rtl:translate-x-0' : 'lg:-translate-x-full lg:rtl:translate-x-full',
                     // Positioning
                     'left-0 rtl:left-auto rtl:right-0',
                     'border-r rtl:border-r-0 rtl:border-l border-border',
-                    // Mobile state handling
-                    sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'
+                    // Mobile state
+                    mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'
                 )}
             >
                 {/* Logo */}
@@ -143,7 +151,7 @@ export function Layout({ children }: LayoutProps) {
                     </div>
                     <button
                         className="ms-auto lg:hidden"
-                        onClick={() => setSidebarOpen(false)}
+                        onClick={() => setMobileSidebarOpen(false)}
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -158,7 +166,7 @@ export function Layout({ children }: LayoutProps) {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                onClick={() => setSidebarOpen(false)}
+                                onClick={() => setMobileSidebarOpen(false)}
                             >
                                 <span
                                     className={cn(
@@ -245,14 +253,35 @@ export function Layout({ children }: LayoutProps) {
             </aside>
 
             {/* Main content */}
-            <div className="lg:pl-64 lg:rtl:pl-0 lg:rtl:pr-64 transition-[padding] duration-300 ease-in-out">
+            <div className={cn(
+                "transition-[padding] duration-300 ease-in-out",
+                desktopSidebarOpen ? "lg:pl-64 lg:rtl:pl-0 lg:rtl:pr-64" : "lg:pl-0"
+            )}>
+                {/* Top bar */}
                 {/* Top bar */}
                 <header className="sticky top-0 z-30 flex items-center gap-4 px-4 py-3 bg-background/80 backdrop-blur-lg border-b border-border">
+                    {/* Mobile Toggle */}
                     <button
                         className="lg:hidden p-2 -ms-2 rounded-lg hover:bg-secondary"
-                        onClick={() => setSidebarOpen(true)}
+                        onClick={() => setMobileSidebarOpen(true)}
                     >
                         <Menu className="w-5 h-5" />
+                    </button>
+
+                    {/* Desktop Toggle */}
+                    <button
+                        className="hidden lg:block p-2 -ms-2 rounded-lg hover:bg-secondary"
+                        onClick={() => {
+                            const newState = !desktopSidebarOpen
+                            setDesktopSidebarOpen(newState)
+                            localStorage.setItem('desktop_sidebar_open', String(newState))
+                        }}
+                    >
+                        {desktopSidebarOpen ? (
+                            <ChevronLeft className="w-5 h-5" />
+                        ) : (
+                            <ChevronRight className="w-5 h-5" />
+                        )}
                     </button>
 
                     <div className="flex-1" />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
 import { supabase } from '@/auth/supabase'
@@ -20,13 +20,15 @@ import {
     Dialog,
     DialogContent,
     DialogHeader,
-    DialogTitle
+    DialogTitle,
+    SaleReceipt
 } from '@/ui/components'
 import {
     Receipt,
     Eye,
     Loader2,
-    Trash2
+    Trash2,
+    Printer
 } from 'lucide-react'
 
 export function Sales() {
@@ -36,6 +38,94 @@ export function Sales() {
     const [sales, setSales] = useState<Sale[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
+    const [printingSale, setPrintingSale] = useState<Sale | null>(null)
+    const printRef = useRef<HTMLDivElement>(null)
+
+    const handlePrint = () => {
+        if (!printRef.current) return
+
+        const content = printRef.current.innerHTML
+        const iframe = document.createElement('iframe')
+
+        iframe.style.position = 'absolute'
+        iframe.style.width = '0px'
+        iframe.style.height = '0px'
+        iframe.style.border = 'none'
+
+        document.body.appendChild(iframe)
+
+        const doc = iframe.contentWindow?.document
+        if (doc) {
+            // Gather all styles from the main document (Tailwind, local styles, etc.)
+            const styles = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"))
+                .map(node => node.outerHTML)
+                .join("")
+
+            doc.open()
+            doc.write(`
+                <html dir="${document.dir}">
+                    <head>
+                        <title>Print Receipt</title>
+                        ${styles}
+                        <style>
+                            @media print {
+                                @page { size: 80mm auto; margin: 0; }
+                                body { margin: 0; padding: 10px; }
+                                html, body { height: auto; overflow: visible; }
+                            }
+                            body { 
+                                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+                                background: white;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${content}
+                    </body>
+                </html>
+            `)
+            doc.close()
+
+            // Wait for resources (styles/images) to load
+            const print = () => {
+                iframe.contentWindow?.focus()
+                iframe.contentWindow?.print()
+                setPrintingSale(null)
+                // Cleanup
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe)
+                    }
+                }, 1000)
+            }
+
+            if (iframe.contentWindow) {
+                // Try onload
+                iframe.contentWindow.onload = print
+                // Fallback timeout in case onload doesn't fire
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        print()
+                    }
+                }, 1500)
+            }
+        }
+    }
+
+    const onPrintClick = (sale: Sale) => {
+        setPrintingSale(sale)
+    }
+
+    useEffect(() => {
+        if (printingSale) {
+            // Small timeout to ensure DOM is ready and styles are applied
+            setTimeout(() => {
+                if (printRef.current) {
+                    handlePrint()
+                }
+            }, 100)
+        }
+    }, [printingSale])
 
     const handleDeleteSale = async (id: string) => {
         if (!confirm(t('common.messages.deleteConfirm') || 'Are you sure you want to delete this sale? Inventory will be restored.')) return
@@ -69,9 +159,27 @@ export function Sales() {
 
             if (error) throw error
 
+            // Fetch profiles for cashiers
+            const cashierIds = Array.from(new Set(data.map((s: any) => s.cashier_id).filter(Boolean)))
+            let profilesMap: Record<string, string> = {}
+
+            if (cashierIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('id, name')
+                    .in('id', cashierIds)
+
+                if (profiles) {
+                    profilesMap = profiles.reduce((acc: any, curr: any) => ({
+                        ...acc,
+                        [curr.id]: curr.name
+                    }), {})
+                }
+            }
+
             const formattedSales = data.map((sale: any) => ({
                 ...sale,
-                cashier_name: 'Staff',
+                cashier_name: profilesMap[sale.cashier_id] || 'Staff',
                 items: sale.items?.map((item: any) => ({
                     ...item,
                     product_name: item.product?.name || 'Unknown Product',
@@ -153,8 +261,17 @@ export function Sales() {
                                                 variant="ghost"
                                                 size="icon"
                                                 onClick={() => setSelectedSale(sale)}
+                                                title={t('sales.details') || "View Details"}
                                             >
                                                 <Eye className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => onPrintClick(sale)}
+                                                title={t('common.print') || "Print Receipt"}
+                                            >
+                                                <Printer className="w-4 h-4" />
                                             </Button>
                                             {user?.role === 'admin' && (
                                                 <Button
@@ -300,6 +417,18 @@ export function Sales() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Hidden Print Component - using opacity/position instead of display:none to ensure it renders for print */}
+            <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
+                <div ref={printRef}>
+                    {printingSale && (
+                        <SaleReceipt
+                            sale={printingSale}
+                            features={features}
+                        />
+                    )}
+                </div>
+            </div>
         </div>
     )
 }

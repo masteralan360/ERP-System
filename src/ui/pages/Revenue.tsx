@@ -53,9 +53,27 @@ export function Revenue() {
 
             if (error) throw error
 
+            // Fetch profiles for cashiers
+            const cashierIds = Array.from(new Set((data || []).map((s: any) => s.cashier_id).filter(Boolean)))
+            let profilesMap: Record<string, string> = {}
+
+            if (cashierIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('id, name')
+                    .in('id', cashierIds)
+
+                if (profiles) {
+                    profilesMap = profiles.reduce((acc: any, curr: any) => ({
+                        ...acc,
+                        [curr.id]: curr.name
+                    }), {})
+                }
+            }
+
             const formattedSales = (data || []).map((sale: any) => ({
                 ...sale,
-                cashier_name: 'Staff',
+                cashier_name: profilesMap[sale.cashier_id] || 'Staff',
                 items: sale.items?.map((item: any) => ({
                     ...item,
                     product_name: item.product?.name || 'Unknown Product',
