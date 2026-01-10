@@ -114,7 +114,7 @@ async function fetchFromEGCurrency(): Promise<number> {
                 }
             }
         } catch (e) {
-            console.warn('[EGCurrency] JSON parse failed, falling back to regex');
+            console.warn('[Forexfy] JSON parse failed, falling back to regex');
         }
     }
 
@@ -153,7 +153,7 @@ async function fetchFromEGCurrency(): Promise<number> {
         }
     }
 
-    throw new Error('Could not extract Sell Price from egcurrency.com after 4 attempts');
+    throw new Error('Could not extract Sell Price from forexfy.app after 4 attempts');
 }
 
 export type ExchangePath = 'USD-to-IQD' | 'USD-to-EUR' | 'EUR-to-IQD';
@@ -177,7 +177,7 @@ export async function fetchEgRate(path: ExchangePath): Promise<number> {
                 }
             }
         } catch (e) {
-            console.warn(`[EGCurrency] ${path} JSON parse failed, falling back to regex`);
+            console.warn(`[Forexfy] ${path} JSON parse failed, falling back to regex`);
         }
     }
 
@@ -215,5 +215,5 @@ export async function fetchEgRate(path: ExchangePath): Promise<number> {
         }
     }
 
-    throw new Error(`Could not extract rate for ${path} from egcurrency.com`);
+    throw new Error(`Could not extract rate for ${path} from forexfy.app`);
 }

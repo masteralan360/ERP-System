@@ -3,7 +3,7 @@ export default async function handler(req, res) {
         const { path = '' } = req.query;
         // Remove leading slash if any
         const cleanPath = path.startsWith('/') ? path : `/${path}`;
-        const targetUrl = `https://egcurrency.com${cleanPath}`;
+        const targetUrl = `https://forexfy.app${cleanPath}`;
 
         const fetchOptions = {
             headers: {
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache',
-                'Referer': 'https://www.google.com/',
+                'Referer': 'https://forexfy.app/',
                 'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
                 'Sec-Ch-Ua-Mobile': '?0',
                 'Sec-Ch-Ua-Platform': '"Windows"',
@@ -29,13 +29,13 @@ export default async function handler(req, res) {
         // If specific page fails, try the home page fallback
         if (!response.ok && cleanPath !== '/en') {
             console.warn(`[EgCurrency Proxy] Path ${cleanPath} failed (${response.status}), trying home page...`);
-            response = await fetch('https://egcurrency.com/en', fetchOptions);
+            response = await fetch('https://forexfy.app/en', fetchOptions);
         }
 
         const data = await response.text();
 
         // Check for Cloudflare and log status
-        console.log(`[EgCurrency Proxy] Final Status: ${response.status} - Content Length: ${data.length}`);
+        console.log(`[Forexfy Proxy] Final Status: ${response.status} - Content Length: ${data.length}`);
 
         if (data.includes('cf-browser-verification') || data.includes('Checking your browser')) {
             console.error('[EgCurrency Proxy] Blocked by Cloudflare JS Challenge');

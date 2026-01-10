@@ -68,11 +68,11 @@ export default defineConfig({
                 }
             },
             '/api-egcurrency': {
-                target: 'https://egcurrency.com',
+                target: 'https://forexfy.app',
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/api-egcurrency/, ''),
                 headers: {
-                    'Referer': 'https://egcurrency.com',
+                    'Referer': 'https://forexfy.app',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 }
             }
