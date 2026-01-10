@@ -20,7 +20,8 @@ import {
     Check,
     UsersRound,
     CreditCard,
-    Receipt
+    Receipt,
+    TrendingUp
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from './button'
@@ -73,6 +74,10 @@ export function Layout({ children }: LayoutProps) {
         ] : []),
         // Sales - always visible (history of transactions)
         { name: t('nav.sales') || 'Sales', href: '/sales', icon: Receipt },
+        // Revenue - admin only
+        ...(user?.role === 'admin' ? [
+            { name: t('nav.revenue') || 'Net Revenue', href: '/revenue', icon: TrendingUp }
+        ] : []),
         // Products - always visible
         { name: t('nav.products'), href: '/products', icon: Package },
         // Customers - requires feature flag

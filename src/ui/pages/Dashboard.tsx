@@ -1,13 +1,16 @@
-import { useDashboardStats } from '@/local-db'
+import { useDashboardStats, useSales } from '@/local-db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/components'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Package, Users, ShoppingCart, FileText, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Package, Users, ShoppingCart, FileText, DollarSign, AlertTriangle } from 'lucide-react'
 import { Link } from 'wouter'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
+import { useWorkspace } from '@/workspace'
 
 export function Dashboard() {
     const { user } = useAuth()
+    const { features } = useWorkspace()
+    useSales(user?.workspaceId) // Background sync for sales
     const stats = useDashboardStats(user?.workspaceId)
     const { t } = useTranslation()
 
@@ -39,12 +42,13 @@ export function Dashboard() {
             href: '/orders'
         },
         {
-            title: t('dashboard.totalRevenue'),
-            value: formatCurrency(stats.totalRevenue),
-            icon: TrendingUp,
-            color: 'text-amber-500',
-            bgColor: 'bg-amber-500/10',
-            href: '/invoices'
+            title: t('revenue.grossRevenue'),
+            value: stats.grossRevenueByCurrency,
+            icon: DollarSign,
+            color: 'text-primary',
+            bgColor: 'bg-primary/10',
+            href: '/revenue',
+            isRevenue: true
         }
     ]
 
@@ -70,7 +74,20 @@ export function Dashboard() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{stat.value}</div>
+                                <div className="text-2xl font-bold">
+                                    {stat.isRevenue ? (
+                                        <div className="flex flex-col gap-0.5">
+                                            {Object.entries(stat.value || {}).map(([curr, val]) => (
+                                                <div key={curr} className="text-lg md:text-xl line-clamp-1">
+                                                    {formatCurrency(val as number, curr, features.iqd_display_preference)}
+                                                </div>
+                                            ))}
+                                            {Object.keys(stat.value || {}).length === 0 && formatCurrency(0, 'usd')}
+                                        </div>
+                                    ) : (
+                                        stat.value as any
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     </Link>

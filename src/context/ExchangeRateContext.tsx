@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { fetchUSDToIQDRate, fetchEURToIQDRate, type ExchangeRateResult } from '@/lib/exchangeRate'
 import { useWorkspace } from '@/workspace'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 
 export interface ExchangeSnapshot {
     rate: number
@@ -30,6 +31,10 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
     })
     const [status, setStatus] = useState<'loading' | 'live' | 'error'>('loading')
     const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+    const isOnline = useNetworkStatus()
+
+    // Force error status if offline
+    const effectiveStatus = !isOnline ? 'error' : status
 
     const refresh = useCallback(async () => {
         setStatus('loading')
@@ -75,7 +80,7 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
     }, [refresh])
 
     return (
-        <ExchangeRateContext.Provider value={{ exchangeData, eurRates, status, lastUpdated, refresh }}>
+        <ExchangeRateContext.Provider value={{ exchangeData, eurRates, status: effectiveStatus, lastUpdated, refresh }}>
             {children}
         </ExchangeRateContext.Provider>
     )

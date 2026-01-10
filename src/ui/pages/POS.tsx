@@ -76,7 +76,7 @@ export function POS() {
     }
 
     // Exchange Rate for advisory display and calculations
-    const { exchangeData, eurRates, refresh: refreshExchangeRate } = useExchangeRate()
+    const { exchangeData, eurRates, status, refresh: refreshExchangeRate } = useExchangeRate()
     const settlementCurrency = features.default_currency || 'usd'
 
     useEffect(() => {
@@ -372,12 +372,16 @@ export function POS() {
             const product = products.find(p => p.id === item.product_id)
             const originalCurrency = product?.currency || 'usd'
             const convertedUnitPrice = convertPrice(item.price, originalCurrency, settlementCurrency)
+            const costPrice = product?.costPrice || 0
+            const convertedCostPrice = convertPrice(costPrice, originalCurrency, settlementCurrency)
 
             return {
                 product_id: item.product_id,
                 quantity: item.quantity,
                 unit_price: item.price, // original
                 total_price: item.price * item.quantity, // original total
+                cost_price: costPrice, // capture cost at time of sale
+                converted_cost_price: convertedCostPrice,
                 original_currency: originalCurrency,
                 original_unit_price: item.price,
                 converted_unit_price: convertedUnitPrice,
@@ -440,11 +444,11 @@ export function POS() {
                         workspaceId: user.workspaceId,
                         cashierId: user.id,
                         totalAmount: totalAmount,
-                        settlement_currency: settlementCurrency,
-                        exchange_source: snapshotSource,
-                        exchange_rate: snapshotRate,
-                        exchange_rate_timestamp: snapshotTimestamp,
-                        exchange_rates: checkoutPayload.exchange_rates,
+                        settlementCurrency: settlementCurrency,
+                        exchangeSource: snapshotSource,
+                        exchangeRate: snapshotRate,
+                        exchangeRateTimestamp: snapshotTimestamp,
+                        exchangeRates: checkoutPayload.exchange_rates,
                         origin: 'pos',
                         createdAt: snapshotTimestamp,
                         updatedAt: snapshotTimestamp,
@@ -463,10 +467,12 @@ export function POS() {
                             quantity: item.quantity,
                             unitPrice: item.unit_price,
                             totalPrice: item.total_price,
-                            original_currency: item.original_currency,
-                            original_unit_price: item.original_unit_price,
-                            converted_unit_price: item.converted_unit_price,
-                            settlement_currency: item.settlement_currency
+                            costPrice: item.cost_price,
+                            convertedCostPrice: item.converted_cost_price,
+                            originalCurrency: item.original_currency,
+                            originalUnitPrice: item.original_unit_price,
+                            convertedUnitPrice: item.converted_unit_price,
+                            settlementCurrency: item.settlement_currency
                         })
                     ))
 
@@ -680,8 +686,8 @@ export function POS() {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="opacity-60">100 USD =</span>
-                                        <span className="font-bold text-primary">
-                                            {formatCurrency(exchangeData.rate, 'iqd', features.iqd_display_preference)}
+                                        <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
+                                            {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(exchangeData.rate, 'iqd', features.iqd_display_preference)}
                                         </span>
                                     </div>
                                 </div>
@@ -699,8 +705,8 @@ export function POS() {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="opacity-60">100 EUR =</span>
-                                        <span className="font-bold text-primary">
-                                            {formatCurrency(eurRates.eur_iqd.rate, 'iqd', features.iqd_display_preference)}
+                                        <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
+                                            {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(eurRates.eur_iqd.rate, 'iqd', features.iqd_display_preference)}
                                         </span>
                                     </div>
                                 </div>
@@ -728,7 +734,7 @@ export function POS() {
                         size="lg"
                         className="w-full h-14 text-xl shadow-lg shadow-primary/20"
                         onClick={handleCheckout}
-                        disabled={cart.length === 0 || isLoading || (cart.some(item => products.find(p => p.id === item.product_id)?.currency !== settlementCurrency) && !exchangeData)}
+                        disabled={cart.length === 0 || isLoading || (cart.some(item => products.find(p => p.id === item.product_id)?.currency !== settlementCurrency) && (status === 'error' || !exchangeData))}
                     >
                         {isLoading ? (
                             <Loader2 className="w-6 h-6 animate-spin mr-2" />

@@ -110,11 +110,11 @@ export interface Invoice extends BaseEntity {
 export interface Sale extends BaseEntity {
     cashierId: string
     totalAmount: number
-    settlement_currency: CurrencyCode
-    exchange_source: string
-    exchange_rate: number
-    exchange_rate_timestamp: string
-    exchange_rates?: any[]
+    settlementCurrency: CurrencyCode
+    exchangeSource: string
+    exchangeRate: number
+    exchangeRateTimestamp: string
+    exchangeRates?: any[]
     origin: string
 }
 
@@ -125,10 +125,12 @@ export interface SaleItem {
     quantity: number
     unitPrice: number
     totalPrice: number
-    original_currency: CurrencyCode
-    original_unit_price: number
-    converted_unit_price: number
-    settlement_currency: CurrencyCode
+    costPrice: number
+    convertedCostPrice: number
+    originalCurrency: CurrencyCode
+    originalUnitPrice: number
+    convertedUnitPrice: number
+    settlementCurrency: CurrencyCode
 }
 
 

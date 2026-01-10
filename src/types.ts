@@ -5,6 +5,8 @@ export interface SaleItem {
     quantity: number
     unit_price: number
     total_price: number
+    cost_price?: number
+    converted_cost_price?: number
     product_name?: string
     product_sku?: string
     original_currency: string

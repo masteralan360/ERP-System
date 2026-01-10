@@ -18,14 +18,14 @@ export class ERPDatabase extends Dexie {
     constructor() {
         super('ERPDatabase')
 
-        this.version(8).stores({
+        this.version(9).stores({
             products: 'id, sku, name, categoryId, workspaceId, currency, syncStatus, updatedAt, isDeleted',
             categories: 'id, name, workspaceId, syncStatus, updatedAt, isDeleted',
             customers: 'id, name, email, workspaceId, syncStatus, updatedAt, isDeleted',
             orders: 'id, orderNumber, customerId, status, workspaceId, syncStatus, updatedAt, isDeleted',
             invoices: 'id, invoiceNumber, orderId, customerId, status, workspaceId, syncStatus, updatedAt, isDeleted',
             users: 'id, email, role, workspaceId, syncStatus, updatedAt, isDeleted',
-            sales: 'id, cashierId, workspaceId, settlement_currency, syncStatus, createdAt',
+            sales: 'id, cashierId, workspaceId, settlementCurrency, syncStatus, createdAt',
             sale_items: 'id, saleId, productId',
             workspaces: 'id, name, code, syncStatus, updatedAt, isDeleted',
             syncQueue: 'id, entityType, entityId, operation, timestamp',

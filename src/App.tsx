@@ -18,6 +18,7 @@ const Admin = lazy(() => import('@/ui/pages/Admin').then(m => ({ default: m.Admi
 const WorkspaceRegistration = lazy(() => import('@/ui/pages/WorkspaceRegistration').then(m => ({ default: m.WorkspaceRegistration })))
 const POS = lazy(() => import('@/ui/pages/POS').then(m => ({ default: m.POS })))
 const Sales = lazy(() => import('@/ui/pages/Sales').then(m => ({ default: m.Sales })))
+const Revenue = lazy(() => import('@/ui/pages/Revenue').then(m => ({ default: m.Revenue })))
 const WorkspaceConfiguration = lazy(() => import('@/ui/pages/WorkspaceConfiguration').then(m => ({ default: m.WorkspaceConfiguration })))
 
 // Preload list for Electron
@@ -29,6 +30,7 @@ const pages = [
     () => import('@/ui/pages/Invoices'),
     () => import('@/ui/pages/POS'),
     () => import('@/ui/pages/Sales'),
+    () => import('@/ui/pages/Revenue'),
     () => import('@/ui/pages/Settings'),
     () => import('@/ui/pages/Members'),
     () => import('@/ui/pages/WorkspaceConfiguration'),
@@ -96,6 +98,13 @@ function App() {
                                 <ProtectedRoute>
                                     <Layout>
                                         <Sales />
+                                    </Layout>
+                                </ProtectedRoute>
+                            </Route>
+                            <Route path="/revenue">
+                                <ProtectedRoute allowedRoles={['admin']}>
+                                    <Layout>
+                                        <Revenue />
                                     </Layout>
                                 </ProtectedRoute>
                             </Route>

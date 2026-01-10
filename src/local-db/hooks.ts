@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './database'
-import type { Product, Category, Customer, Order, Invoice, OfflineMutation } from './models'
+import type { Product, Category, Customer, Order, Invoice, OfflineMutation, Sale } from './models'
 import { generateId, toSnakeCase, toCamelCase } from '@/lib/utils'
 import { supabase } from '@/auth/supabase'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -768,6 +768,53 @@ export async function deleteInvoice(id: string): Promise<void> {
 }
 
 // ===================
+// SALES HOOKS
+// ===================
+
+export function useSales(workspaceId: string | undefined) {
+    const isOnline = useNetworkStatus()
+
+    const sales = useLiveQuery(
+        () => workspaceId ? db.sales.where('workspaceId').equals(workspaceId).toArray() : [],
+        [workspaceId]
+    )
+
+    useEffect(() => {
+        async function fetchFromSupabase() {
+            if (isOnline && workspaceId) {
+                const { data, error } = await supabase
+                    .from('sales')
+                    .select('*')
+                    .eq('workspace_id', workspaceId)
+
+                if (data && !error) {
+                    await db.transaction('rw', db.sales, async () => {
+                        const remoteIds = new Set(data.map(d => d.id))
+                        const localItems = await db.sales.where('workspaceId').equals(workspaceId).toArray()
+
+                        for (const local of localItems) {
+                            if (!remoteIds.has(local.id) && local.syncStatus === 'synced') {
+                                await db.sales.delete(local.id)
+                            }
+                        }
+
+                        for (const remoteItem of data) {
+                            const localItem = toCamelCase(remoteItem as any) as unknown as Sale
+                            localItem.syncStatus = 'synced'
+                            localItem.lastSyncedAt = new Date().toISOString()
+                            await db.sales.put(localItem)
+                        }
+                    })
+                }
+            }
+        }
+        fetchFromSupabase()
+    }, [isOnline, workspaceId])
+
+    return sales ?? []
+}
+
+// ===================
 // SYNC QUEUE
 // ===================
 
@@ -871,7 +918,8 @@ export function useDashboardStats(workspaceId: string | undefined) {
             invoiceCount,
             recentOrders,
             pendingInvoices,
-            lowStockProducts
+            lowStockProducts,
+            sales
         ] = await Promise.all([
             db.products.where('workspaceId').equals(workspaceId).and(p => !p.isDeleted).count(),
             db.categories.where('workspaceId').equals(workspaceId).and(c => !c.isDeleted).count(),
@@ -880,11 +928,17 @@ export function useDashboardStats(workspaceId: string | undefined) {
             db.invoices.where('workspaceId').equals(workspaceId).and(i => !i.isDeleted).count(),
             db.orders.where('workspaceId').equals(workspaceId).and(o => !o.isDeleted).reverse().sortBy('createdAt').then(orders => orders.slice(0, 5)),
             db.invoices.where('workspaceId').equals(workspaceId).and(inv => !inv.isDeleted && (inv.status === 'sent' || inv.status === 'overdue')).toArray(),
-            db.products.where('workspaceId').equals(workspaceId).and(p => !p.isDeleted && p.quantity <= p.minStockLevel).toArray()
+            db.products.where('workspaceId').equals(workspaceId).and(p => !p.isDeleted && p.quantity <= p.minStockLevel).toArray(),
+            db.sales.where('workspaceId').equals(workspaceId).toArray()
         ])
 
-        const totalRevenue = (await db.invoices.where('workspaceId').equals(workspaceId).and(inv => !inv.isDeleted && inv.status === 'paid').toArray())
-            .reduce((sum, inv) => sum + inv.total, 0)
+
+        // Calculate multi-currency gross revenue from sales
+        const grossRevenueByCurrency: Record<string, number> = {}
+        sales.forEach(sale => {
+            const curr = sale.settlementCurrency || 'usd'
+            grossRevenueByCurrency[curr] = (grossRevenueByCurrency[curr] || 0) + sale.totalAmount
+        })
 
         return {
             productCount,
@@ -895,9 +949,9 @@ export function useDashboardStats(workspaceId: string | undefined) {
             recentOrders,
             pendingInvoices,
             lowStockProducts,
-            totalRevenue
+            grossRevenueByCurrency
         }
-    }, [])
+    }, [workspaceId])
 
     return stats ?? {
         productCount: 0,
@@ -908,6 +962,6 @@ export function useDashboardStats(workspaceId: string | undefined) {
         recentOrders: [],
         pendingInvoices: [],
         lowStockProducts: [],
-        totalRevenue: 0
+        grossRevenueByCurrency: {}
     }
 }

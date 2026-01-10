@@ -19,7 +19,8 @@
         "add": "Add",
         "each": "each",
         "snapshots": "Snapshots",
-        "added": "Added"
+        "added": "Added",
+        "offline": "Offline"
     },
     "nav": {
         "dashboard": "Dashboard",
@@ -27,8 +28,9 @@
         "customers": "Customers",
         "orders": "Orders",
         "invoices": "Invoices",
-        "pos": "POS",
-        "sales": "Sales",
+        "pos": "Point of Sale",
+        "sales": "Sales History",
+        "revenue": "Net Revenue",
         "settings": "Settings"
     },
     "products": {
@@ -443,6 +445,28 @@
             "deleteSuccess": "Category deleted successfully",
             "deleteConfirm": "Are you sure you want to delete this category? Products will remain but will have no category.",
             "duplicateName": "A category with this name already exists."
+        }
+    },
+    "revenue": {
+        "title": "Net Revenue & Profit",
+        "subtitle": "Monitor your business earnings and margins",
+        "grossRevenue": "Gross Revenue",
+        "totalCost": "Total Cost (COGS)",
+        "netProfit": "Net Profit",
+        "profitMargin": "Profit Margin",
+        "dailyProfit": "Daily Profit Trend",
+        "listTitle": "Recent Sales Profit Analysis",
+        "table": {
+            "date": "Date",
+            "origin": "Source",
+            "revenue": "Revenue",
+            "cost": "Cost",
+            "profit": "Profit",
+            "margin": "Margin"
+        },
+        "stats": {
+            "totalSales": "Total Sales",
+            "avgOrderValue": "Avg. Sale Profit"
         }
     }
 }
