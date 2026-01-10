@@ -118,11 +118,22 @@ async function fetchFromEGCurrency(): Promise<number> {
         }
     }
 
-    // Fallback to regex on HTML
+    // Fallback 2: Main Rate Selector
     const htmlRegex = /Sell Price:<\/span>\s*<b class="fs-5">([\d,.]+)<\/b>/;
     const htmlMatch = html.match(htmlRegex);
     if (htmlMatch && htmlMatch[1]) {
         const rawValue = htmlMatch[1].replace(/,/g, '');
+        const sellValue = parseFloat(rawValue);
+        if (!isNaN(sellValue)) {
+            return Math.round(sellValue * 100);
+        }
+    }
+
+    // Fallback 3: Top Navigation Bar (Useful if we hit home page fallback)
+    const navRegex = /href="\/en\/currency\/USD-to-IQD\/blackMarket".*?>\s*<b>([\d,.]+)<\/b>/i;
+    const navMatch = html.match(navRegex);
+    if (navMatch && navMatch[1]) {
+        const rawValue = navMatch[1].replace(/,/g, '');
         const sellValue = parseFloat(rawValue);
         if (!isNaN(sellValue)) {
             return Math.round(sellValue * 100);
@@ -157,10 +168,22 @@ export async function fetchEgRate(path: ExchangePath): Promise<number> {
         }
     }
 
+    // Fallback 2: Main Rate Selector
     const htmlRegex = /Sell Price:<\/span>\s*<b class="fs-5">([\d,.]+)<\/b>/;
     const htmlMatch = html.match(htmlRegex);
     if (htmlMatch && htmlMatch[1]) {
         const rawValue = htmlMatch[1].replace(/,/g, '');
+        const sellValue = parseFloat(rawValue);
+        if (!isNaN(sellValue)) {
+            return Math.round(sellValue * 100);
+        }
+    }
+
+    // Fallback 3: Top Navigation Bar
+    const navRegex = new RegExp(`href="\\/en\\/currency\\/${path}\\/blackMarket".*?>\\s*<b>([\\d,.]+)</b>`, 'i');
+    const navMatch = html.match(navRegex);
+    if (navMatch && navMatch[1]) {
+        const rawValue = navMatch[1].replace(/,/g, '');
         const sellValue = parseFloat(rawValue);
         if (!isNaN(sellValue)) {
             return Math.round(sellValue * 100);
