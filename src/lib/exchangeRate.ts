@@ -118,29 +118,42 @@ async function fetchFromEGCurrency(): Promise<number> {
         }
     }
 
-    // Fallback 2: Main Rate Selector
-    const htmlRegex = /Sell Price:<\/span>\s*<b class="fs-5">([\d,.]+)<\/b>/;
+    // Fallback 2: Main Rate Selector (Highly Flexible)
+    const htmlRegex = /Sell Price:.*?<b.*?>([\d,.]+)/i;
     const htmlMatch = html.match(htmlRegex);
     if (htmlMatch && htmlMatch[1]) {
         const rawValue = htmlMatch[1].replace(/,/g, '');
         const sellValue = parseFloat(rawValue);
-        if (!isNaN(sellValue)) {
+        if (!isNaN(sellValue) && sellValue > 100) {
             return Math.round(sellValue * 100);
         }
     }
 
-    // Fallback 3: Top Navigation Bar (Useful if we hit home page fallback)
-    const navRegex = /href="\/en\/currency\/USD-to-IQD\/blackMarket".*?>\s*<b>([\d,.]+)<\/b>/i;
+    // Fallback 3: Navigation/Link Pattern (Extracted from Home Page)
+    // Looking for <b>...</b> inside an element that contains currency name
+    const navRegex = /USD-to-IQD.*?<b>([\d,.]+)/i;
     const navMatch = html.match(navRegex);
     if (navMatch && navMatch[1]) {
         const rawValue = navMatch[1].replace(/,/g, '');
         const sellValue = parseFloat(rawValue);
-        if (!isNaN(sellValue)) {
+        if (!isNaN(sellValue) && sellValue > 100) {
             return Math.round(sellValue * 100);
         }
     }
 
-    throw new Error('Could not extract Sell Price from egcurrency.com');
+    // Fallback 4: Global Pattern Match (Last Resort)
+    // Matches any sequence like "USD ... 1,450.00" or similar
+    const globalRegex = /USD.*?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/i;
+    const globalMatch = html.match(globalRegex);
+    if (globalMatch && globalMatch[1]) {
+        const rawValue = globalMatch[1].replace(/,/g, '');
+        const sellValue = parseFloat(rawValue);
+        if (!isNaN(sellValue) && sellValue > 100) {
+            return Math.round(sellValue * 100);
+        }
+    }
+
+    throw new Error('Could not extract Sell Price from egcurrency.com after 4 attempts');
 }
 
 export type ExchangePath = 'USD-to-IQD' | 'USD-to-EUR' | 'EUR-to-IQD';
@@ -168,8 +181,8 @@ export async function fetchEgRate(path: ExchangePath): Promise<number> {
         }
     }
 
-    // Fallback 2: Main Rate Selector
-    const htmlRegex = /Sell Price:<\/span>\s*<b class="fs-5">([\d,.]+)<\/b>/;
+    // Fallback 2: Main Rate Selector (Highly Flexible)
+    const htmlRegex = /Sell Price:.*?<b.*?>([\d,.]+)/i;
     const htmlMatch = html.match(htmlRegex);
     if (htmlMatch && htmlMatch[1]) {
         const rawValue = htmlMatch[1].replace(/,/g, '');
@@ -179,11 +192,23 @@ export async function fetchEgRate(path: ExchangePath): Promise<number> {
         }
     }
 
-    // Fallback 3: Top Navigation Bar
-    const navRegex = new RegExp(`href="\\/en\\/currency\\/${path}\\/blackMarket".*?>\\s*<b>([\\d,.]+)</b>`, 'i');
+    // Fallback 3: Navigation/Link Pattern
+    const navRegex = new RegExp(`${path}.*?<b>([\\d,.]+)`, 'i');
     const navMatch = html.match(navRegex);
     if (navMatch && navMatch[1]) {
         const rawValue = navMatch[1].replace(/,/g, '');
+        const sellValue = parseFloat(rawValue);
+        if (!isNaN(sellValue)) {
+            return Math.round(sellValue * 100);
+        }
+    }
+
+    // Fallback 4: Global Pattern
+    const symbol = path.split('-to-')[0]; // USD or EUR
+    const globalRegex = new RegExp(`${symbol}.*?(\\d{1,3}(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+    const globalMatch = html.match(globalRegex);
+    if (globalMatch && globalMatch[1]) {
+        const rawValue = globalMatch[1].replace(/,/g, '');
         const sellValue = parseFloat(rawValue);
         if (!isNaN(sellValue)) {
             return Math.round(sellValue * 100);
