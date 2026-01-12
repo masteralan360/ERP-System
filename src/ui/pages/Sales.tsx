@@ -357,7 +357,7 @@ export function Sales() {
                                                         <span className="text-[10px] font-bold text-primary/70">{rate.pair}</span>
                                                         <span className="text-[9px] text-muted-foreground italic uppercase">{rate.source}</span>
                                                     </div>
-                                                    <div className="text-sm font-black">
+                                                    <div className="text-sm font-bold">
                                                         100 {rate.pair.split('/')[0]} = {formatCurrency(rate.rate, rate.pair.split('/')[1].toLowerCase() as any, features.iqd_display_preference)}
                                                     </div>
                                                     <div className="text-[9px] text-muted-foreground opacity-70">
