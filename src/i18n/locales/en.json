@@ -1,4 +1,10 @@
 {
+    "lockedWorkspace": {
+        "title": "Workspace Locked",
+        "message": "Your workspace has been temporarily locked. Please contact an administrator to regain access.",
+        "contactAdmin": "Contact an Admin",
+        "additionalInfo": "If you believe this is an error, please reach out to your workspace administrator."
+    },
     "common": {
         "loading": "Loading...",
         "save": "Save",
@@ -16,6 +22,7 @@
         "quantity": "Quantity",
         "price": "Price",
         "total": "Total",
+        "signOut": "Sign out",
         "add": "Add",
         "each": "each",
         "snapshots": "Snapshots",
@@ -407,7 +414,10 @@
         "modifyPrice": "Modify Price",
         "negotiatedPrice": "Negotiated Price",
         "originalPriceLabel": "Original Price",
-        "originalPriceDesc": " "
+        "originalPriceDesc": " ",
+        "paymentMethod": "Payment Method",
+        "digital": "Digital",
+        "cash": "Cash"
     },
     "sales": {
         "title": "Sales History",

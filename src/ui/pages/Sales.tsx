@@ -313,6 +313,26 @@ export function Sales() {
                                     <span className="text-muted-foreground">{t('sales.id')}:</span>
                                     <div className="font-mono text-xs text-muted-foreground">{selectedSale.id}</div>
                                 </div>
+                                <div>
+                                    <span className="text-muted-foreground">{t('pos.paymentMethod') || 'Payment Method'}:</span>
+                                    <div className="font-medium flex items-center gap-2">
+                                        {selectedSale.payment_method === 'fib' && (
+                                            <>
+                                                <img src="/icons/FIB.jpg" alt="FIB" className="w-5 h-5 rounded" />
+                                                FIB
+                                            </>
+                                        )}
+                                        {selectedSale.payment_method === 'qicard' && (
+                                            <>
+                                                <img src="/icons/QIcard.png" alt="QiCard" className="w-5 h-5 rounded" />
+                                                QiCard
+                                            </>
+                                        )}
+                                        {(!selectedSale.payment_method || selectedSale.payment_method === 'cash') && (
+                                            <span>{t('pos.cash') || 'Cash'}</span>
+                                        )}
+                                    </div>
+                                </div>
                                 {selectedSale.exchange_rates && selectedSale.exchange_rates.length > 0 ? (
                                     <div className="col-span-2 space-y-2">
                                         <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">

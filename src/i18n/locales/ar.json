@@ -1,4 +1,10 @@
 {
+    "lockedWorkspace": {
+        "title": "مساحة العمل مقفلة",
+        "message": "تم قفل مساحة العمل الخاصة بك مؤقتًا. يرجى الاتصال بمسؤول للوصول مرة أخرى.",
+        "contactAdmin": "اتصل بمسؤول",
+        "additionalInfo": "إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع مسؤول مساحة العمل."
+    },
     "common": {
         "loading": "جاري التحميل...",
         "save": "حفظ",
@@ -16,6 +22,7 @@
         "quantity": "الكمية",
         "price": "السعر",
         "total": "الإجمالي",
+        "signOut": "الخروح من الحساب",
         "offline": "غير متصل",
         "snapshots": "في وقت البيع"
     },
@@ -396,7 +403,10 @@
         "modifyPrice": "تعديل السعر",
         "negotiatedPrice": "سعر التفاوض",
         "originalPriceLabel": "السعر الأصلي",
-        "originalPriceDesc": " "
+        "originalPriceDesc": " ",
+        "paymentMethod": "طريقة الدفع",
+        "digital": "رقمي",
+        "cash": "نقد"
     },
     "sales": {
         "title": "سجل المبيعات",

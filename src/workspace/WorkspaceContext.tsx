@@ -15,6 +15,7 @@ export interface WorkspaceFeatures {
     iqd_display_preference: IQDDisplayPreference
     eur_conversion_enabled: boolean
     try_conversion_enabled: boolean
+    locked_workspace: boolean
 }
 
 interface WorkspaceContextType {
@@ -34,7 +35,8 @@ const defaultFeatures: WorkspaceFeatures = {
     default_currency: 'usd',
     iqd_display_preference: 'IQD',
     eur_conversion_enabled: false,
-    try_conversion_enabled: false
+    try_conversion_enabled: false,
+    locked_workspace: false
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined)
@@ -68,7 +70,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                         default_currency: localWorkspace.default_currency,
                         iqd_display_preference: localWorkspace.iqd_display_preference,
                         eur_conversion_enabled: (localWorkspace as any).eur_conversion_enabled ?? false,
-                        try_conversion_enabled: (localWorkspace as any).try_conversion_enabled ?? false
+                        try_conversion_enabled: (localWorkspace as any).try_conversion_enabled ?? false,
+                        locked_workspace: (localWorkspace as any).locked_workspace ?? false
                     })
                 } else {
                     setFeatures(defaultFeatures)
@@ -84,7 +87,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                     default_currency: featureData.default_currency || 'usd',
                     iqd_display_preference: featureData.iqd_display_preference || 'IQD',
                     eur_conversion_enabled: featureData.eur_conversion_enabled ?? false,
-                    try_conversion_enabled: featureData.try_conversion_enabled ?? false
+                    try_conversion_enabled: featureData.try_conversion_enabled ?? false,
+                    locked_workspace: featureData.locked_workspace ?? false
                 }
                 setFeatures(fetchedFeatures)
 
@@ -96,6 +100,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                     code: 'LOADED',
                     default_currency: fetchedFeatures.default_currency,
                     iqd_display_preference: fetchedFeatures.iqd_display_preference,
+                    eur_conversion_enabled: fetchedFeatures.eur_conversion_enabled,
+                    try_conversion_enabled: fetchedFeatures.try_conversion_enabled,
+                    locked_workspace: fetchedFeatures.locked_workspace,
                     syncStatus: 'synced',
                     lastSyncedAt: new Date().toISOString(),
                     version: 1,
@@ -155,6 +162,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                 code: 'LOCAL',
                 default_currency: settings.default_currency || 'usd',
                 iqd_display_preference: settings.iqd_display_preference || 'IQD',
+                locked_workspace: false,
                 syncStatus: 'pending',
                 lastSyncedAt: null,
                 version: 1,

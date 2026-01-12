@@ -389,8 +389,13 @@ export function Revenue() {
                                                             <span className="font-medium">
                                                                 {formatCurrency(item.converted_unit_price || item.unit_price, selectedSale.settlement_currency || 'usd', features.iqd_display_preference)}
                                                             </span>
+                                                            {item.negotiated_price && (
+                                                                <span className="text-[10px] text-emerald-600 font-bold">
+                                                                    {t('pos.negotiatedPrice') || 'Negotiated'}
+                                                                </span>
+                                                            )}
                                                             {isConverted && (
-                                                                <span className="text-[10px] text-muted-foreground">
+                                                                <span className="text-[10px] text-muted-foreground line-through opacity-70">
                                                                     {formatCurrency(item.original_unit_price || item.unit_price, item.original_currency || 'usd', features.iqd_display_preference)}
                                                                 </span>
                                                             )}

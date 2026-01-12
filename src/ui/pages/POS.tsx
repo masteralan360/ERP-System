@@ -66,6 +66,9 @@ export function POS() {
     const [negotiatedPriceInput, setNegotiatedPriceInput] = useState('')
     const isAdmin = user?.role === 'admin'
 
+    // Payment Method State
+    const [paymentType, setPaymentType] = useState<'cash' | 'digital'>('cash')
+    const [digitalProvider, setDigitalProvider] = useState<'fib' | 'qicard'>('fib')
     // Filter products
     const filteredProducts = products.filter(
         (p) =>
@@ -531,8 +534,9 @@ export function POS() {
             exchange_source: exchangeRatesSnapshot.length > 1 ? 'mixed' : snapshotSource,
             exchange_rate: snapshotRate,
             exchange_rate_timestamp: snapshotTimestamp,
-            exchange_rates: exchangeRatesSnapshot, // New field for multi-currency
-            origin: 'pos'
+            exchange_rates: exchangeRatesSnapshot,
+            origin: 'pos',
+            payment_method: paymentType === 'cash' ? 'cash' : digitalProvider
         }
 
         try {
@@ -916,6 +920,79 @@ export function POS() {
                                 <span className="text-[10px] uppercase opacity-50 tracking-tighter">{settlementCurrency}</span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Payment Method Toggle */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground font-medium">{t('pos.paymentMethod') || 'Payment Method'}</span>
+                            <div className="flex bg-muted rounded-lg p-0.5 gap-0.5">
+                                <button
+                                    onClick={() => setPaymentType('cash')}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5",
+                                        paymentType === 'cash'
+                                            ? "bg-background shadow-sm"
+                                            : "hover:bg-background/50"
+                                    )}
+                                >
+                                    <CreditCard className="w-3 h-3" />
+                                    {t('pos.cash') || 'Cash'}
+                                </button>
+                                <button
+                                    onClick={() => setPaymentType('digital')}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5",
+                                        paymentType === 'digital'
+                                            ? "bg-background shadow-sm"
+                                            : "hover:bg-background/50"
+                                    )}
+                                >
+                                    <Zap className="w-3 h-3" />
+                                    {t('pos.digital') || 'Digital'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Digital Provider Sub-toggle */}
+                        {paymentType === 'digital' && (
+                            <div className="flex justify-end">
+                                <div className="flex bg-muted/50 rounded-lg p-0.5 gap-1">
+                                    <button
+                                        onClick={() => setDigitalProvider('fib')}
+                                        className={cn(
+                                            "p-1.5 rounded-md transition-colors flex items-center gap-1",
+                                            digitalProvider === 'fib'
+                                                ? "bg-background shadow-sm ring-1 ring-primary/30"
+                                                : "hover:bg-background/50 opacity-60"
+                                        )}
+                                        title="FIB"
+                                    >
+                                        <img
+                                            src="/icons/FIB.jpg"
+                                            alt="FIB"
+                                            className="w-6 h-6 rounded"
+                                        />
+                                    </button>
+                                    <button
+                                        onClick={() => setDigitalProvider('qicard')}
+                                        className={cn(
+                                            "p-1.5 rounded-md transition-colors flex items-center gap-1",
+                                            digitalProvider === 'qicard'
+                                                ? "bg-background shadow-sm ring-1 ring-primary/30"
+                                                : "hover:bg-background/50 opacity-60"
+                                        )}
+                                        title="QiCard"
+                                    >
+                                        <img
+                                            src="/icons/QIcard.png"
+                                            alt="QiCard"
+                                            className="w-6 h-6 rounded"
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <Button

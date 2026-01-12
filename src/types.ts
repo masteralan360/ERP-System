@@ -28,6 +28,7 @@ export interface Sale {
     exchange_rates?: any[]
     created_at: string
     origin: 'pos' | 'manual'
+    payment_method?: 'cash' | 'fib' | 'qicard'
     cashier_name?: string
     items?: SaleItem[]
 }

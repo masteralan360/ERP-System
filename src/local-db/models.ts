@@ -156,6 +156,7 @@ export interface Workspace extends BaseEntity {
     iqd_display_preference: IQDDisplayPreference
     eur_conversion_enabled?: boolean
     try_conversion_enabled?: boolean
+    locked_workspace: boolean
 }
 
 export interface OfflineMutation {

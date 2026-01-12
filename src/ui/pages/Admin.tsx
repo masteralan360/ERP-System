@@ -10,7 +10,8 @@ import {
     Calendar,
     Building2,
     CheckCircle2,
-    XCircle
+    XCircle,
+    Lock
 } from 'lucide-react'
 import {
     Button,
@@ -47,6 +48,7 @@ interface AdminWorkspace {
     allow_orders: boolean
     allow_invoices: boolean
     is_configured: boolean
+    locked_workspace: boolean
     deleted_at?: string | null
 }
 
@@ -182,6 +184,7 @@ export function Admin() {
             allow_customers: feature === 'allow_customers' ? !workspace.allow_customers : workspace.allow_customers,
             allow_orders: feature === 'allow_orders' ? !workspace.allow_orders : workspace.allow_orders,
             allow_invoices: feature === 'allow_invoices' ? !workspace.allow_invoices : workspace.allow_invoices,
+            locked_workspace: feature === 'locked_workspace' ? !workspace.locked_workspace : workspace.locked_workspace,
         }
 
         try {
@@ -191,7 +194,8 @@ export function Admin() {
                 new_allow_pos: newValues.allow_pos,
                 new_allow_customers: newValues.allow_customers,
                 new_allow_orders: newValues.allow_orders,
-                new_allow_invoices: newValues.allow_invoices
+                new_allow_invoices: newValues.allow_invoices,
+                new_locked_workspace: newValues.locked_workspace
             })
 
             if (error) throw error
@@ -426,6 +430,7 @@ export function Admin() {
                                             <th className="px-6 py-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customers</th>
                                             <th className="px-6 py-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Orders</th>
                                             <th className="px-6 py-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Invoices</th>
+                                            <th className="px-6 py-4 text-center text-xs font-semibold text-amber-500 uppercase tracking-wider"><Lock className="w-4 h-4 inline" /></th>
                                             <th className="px-6 py-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Configured</th>
                                         </tr>
                                     </thead>
@@ -483,6 +488,15 @@ export function Admin() {
                                                         <Switch
                                                             checked={ws.allow_invoices}
                                                             onCheckedChange={() => handleToggleWorkspaceFeature(ws.id, 'allow_invoices', ws.allow_invoices)}
+                                                            disabled={!!ws.deleted_at}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex justify-center">
+                                                        <Switch
+                                                            checked={ws.locked_workspace}
+                                                            onCheckedChange={() => handleToggleWorkspaceFeature(ws.id, 'locked_workspace', ws.locked_workspace)}
                                                             disabled={!!ws.deleted_at}
                                                         />
                                                     </div>

@@ -20,6 +20,7 @@ const POS = lazy(() => import('@/ui/pages/POS').then(m => ({ default: m.POS })))
 const Sales = lazy(() => import('@/ui/pages/Sales').then(m => ({ default: m.Sales })))
 const Revenue = lazy(() => import('@/ui/pages/Revenue').then(m => ({ default: m.Revenue })))
 const WorkspaceConfiguration = lazy(() => import('@/ui/pages/WorkspaceConfiguration').then(m => ({ default: m.WorkspaceConfiguration })))
+const LockedWorkspace = lazy(() => import('@/ui/pages/LockedWorkspace').then(m => ({ default: m.LockedWorkspace })))
 
 // Preload list for Electron
 const pages = [
@@ -77,6 +78,11 @@ function App() {
                                 <GuestRoute>
                                     <Register />
                                 </GuestRoute>
+                            </Route>
+
+                            {/* Locked Workspace Route - no layout, standalone page */}
+                            <Route path="/locked-workspace">
+                                <LockedWorkspace />
                             </Route>
 
                             {/* Protected Routes */}

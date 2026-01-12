@@ -1,4 +1,10 @@
 {
+    "lockedWorkspace": {
+        "title": "شوێنی کار داخراوە",
+        "message": "شوێنی کارەکەت بۆ ماوەیەک داخراوە. تکایە پەیوەندی بکە بە بەڕێوەبەر بۆ گەڕانەوە.",
+        "contactAdmin": "پەیوەندی بکە بە بەڕێوەبەر",
+        "additionalInfo": "ئەگەر پێتوایە ئەمە هەڵەیە، تکایە پەیوەندی بکە بە بەڕێوەبەری شوێنی کار."
+    },
     "common": {
         "loading": "باردەکات...",
         "save": "پاشەکەوت",
@@ -18,6 +24,7 @@
         "total": "کۆی گشتی",
         "offline": "بێ هێڵ",
         "snapshots": "لەکاتی فرۆشتن",
+        "signOut": "گەڕانەوە",
         "messages": {
             "deleteConfirm": "تۆ دڵنیایت کە دەتەوێت ئەم بەرهەمە بسڕیتەوە؟",
             "deleteSuccess": "بەرهەمە بە سەرکەوتوویی سڕایەوە",
@@ -402,7 +409,10 @@
         "modifyPrice": "دەستکاری کردنی نرخ",
         "negotiatedPrice": "سعر التفاوض",
         "originalPriceLabel": "السعر الأصلي",
-        "originalPriceDesc": " "
+        "originalPriceDesc": " ",
+        "paymentMethod": "",
+        "digital": "",
+        "cash": ""
     },
     "sales": {
         "title": "مێژووی فرۆشتن",
