@@ -13,7 +13,6 @@ import {
     RefreshCw,
     ArrowRightLeft,
     Calculator,
-    TrendingUp
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { CurrencyCode } from '@/local-db'
