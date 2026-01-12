@@ -481,7 +481,12 @@ export function Products() {
                                             alt="Preview"
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
-                                                (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=Error';
+                                                // Hide the image and show fallback icon
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                const parent = (e.target as HTMLImageElement).parentElement;
+                                                if (parent) {
+                                                    parent.innerHTML = `<span class="text-xs font-medium text-center px-2 text-muted-foreground">Image Error</span>`;
+                                                }
                                             }}
                                         />
                                     ) : (

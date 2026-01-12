@@ -657,7 +657,12 @@ export function POS() {
                                             alt={product.name}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
-                                                (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=Error';
+                                                // Hide the image and show fallback
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                const parent = (e.target as HTMLImageElement).parentElement;
+                                                if (parent) {
+                                                    parent.innerHTML = `<span class="text-xs font-medium text-center px-2 line-clamp-3">${product.name}</span>`;
+                                                }
                                             }}
                                         />
                                     ) : (
