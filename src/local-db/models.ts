@@ -116,6 +116,7 @@ export interface Sale extends BaseEntity {
     exchangeRateTimestamp: string
     exchangeRates?: any[]
     origin: string
+    payment_method?: 'cash' | 'fib' | 'qicard' | 'zaincash' | 'fastpay'
 }
 
 export interface SaleItem {

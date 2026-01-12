@@ -1,14 +1,24 @@
-import { RefreshCw, Globe, AlertCircle, Loader2 } from 'lucide-react'
+import { RefreshCw, Globe, AlertCircle, Loader2, Calculator } from 'lucide-react'
+import { useLocation } from 'wouter'
 import { useExchangeRate } from '@/context/ExchangeRateContext'
 import { useWorkspace } from '@/workspace'
 import { cn } from '@/lib/utils'
 
 export function ExchangeRateIndicator() {
+    const [, setLocation] = useLocation()
     const { exchangeData, eurRates, tryRates, status, lastUpdated, refresh } = useExchangeRate()
     const { features } = useWorkspace()
 
     return (
         <div className="flex items-center gap-2">
+            <button
+                onClick={() => setLocation('/currency-converter')}
+                className="p-1.5 rounded-lg hover:bg-secondary border border-transparent hover:border-border transition-all group"
+                title="Currency Converter"
+            >
+                <Calculator className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </button>
+
             <div
                 className={cn(
                     'flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border',

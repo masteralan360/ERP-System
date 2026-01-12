@@ -66,9 +66,12 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
                                 <div>
                                     <span className="font-semibold uppercase text-[10px] text-gray-400 block tracking-wider">{t('pos.paymentMethod') || 'Payment Method'}</span>
                                     <span className="font-medium">
-                                        {sale.payment_method === 'cash' && (t('pos.cash') || 'Cash')}
-                                        {sale.payment_method === 'fib' && 'FIB'}
-                                        {sale.payment_method === 'qicard' && 'QiCard'}
+                                        {sale.payment_method === 'cash' ? (t('pos.cash') || 'Cash') :
+                                            sale.payment_method === 'fib' ? 'FIB' :
+                                                sale.payment_method === 'qicard' ? 'QiCard' :
+                                                    sale.payment_method === 'zaincash' ? 'ZainCash' :
+                                                        sale.payment_method === 'fastpay' ? 'FastPay' :
+                                                            t('pos.cash') || 'Cash'}
                                     </span>
                                 </div>
                             )}

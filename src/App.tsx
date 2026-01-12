@@ -21,6 +21,7 @@ const Sales = lazy(() => import('@/ui/pages/Sales').then(m => ({ default: m.Sale
 const Revenue = lazy(() => import('@/ui/pages/Revenue').then(m => ({ default: m.Revenue })))
 const WorkspaceConfiguration = lazy(() => import('@/ui/pages/WorkspaceConfiguration').then(m => ({ default: m.WorkspaceConfiguration })))
 const LockedWorkspace = lazy(() => import('@/ui/pages/LockedWorkspace').then(m => ({ default: m.LockedWorkspace })))
+const CurrencyConverter = lazy(() => import('@/ui/pages/CurrencyConverter').then(m => ({ default: m.CurrencyConverter })))
 
 // Preload list for Electron
 const pages = [
@@ -35,6 +36,7 @@ const pages = [
     () => import('@/ui/pages/Settings'),
     () => import('@/ui/pages/Members'),
     () => import('@/ui/pages/WorkspaceConfiguration'),
+    () => import('@/ui/pages/CurrencyConverter'),
 ]
 
 function LoadingState() {
@@ -140,6 +142,13 @@ function App() {
                                 <ProtectedRoute requiredFeature="allow_invoices">
                                     <Layout>
                                         <Invoices />
+                                    </Layout>
+                                </ProtectedRoute>
+                            </Route>
+                            <Route path="/currency-converter">
+                                <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                                    <Layout>
+                                        <CurrencyConverter />
                                     </Layout>
                                 </ProtectedRoute>
                             </Route>

@@ -326,7 +326,8 @@
             "tryEnableDesc": "تفعيل صرف الليرة التركية في النظام.",
             "trySource": "مصدر الليرة التركية/دينار",
             "forexfy_try": "Forexfy الليرة التركية (السوق السوداء)",
-            "dolardinar_try": "DolarDinar.com ليرة (ورقة السوق)"
+            "dolardinar_try": "DolarDinar.com ليرة (ورقة السوق)",
+            "lastUpdate": "آخر تحديث"
         }
     },
     "sync": {
@@ -406,7 +407,15 @@
         "originalPriceDesc": " ",
         "paymentMethod": "طريقة الدفع",
         "digital": "رقمي",
-        "cash": "نقد"
+        "cash": "نقد",
+        "currencyConverter": "محول العملات",
+        "convert": "تحويل",
+        "swap": "تبديل",
+        "amount": "المبلغ",
+        "from": "من",
+        "to": "إلى",
+        "result": "النتيجة",
+        "backToPos": "العودة إلى نقطة البيع"
     },
     "sales": {
         "title": "سجل المبيعات",

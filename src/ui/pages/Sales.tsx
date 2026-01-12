@@ -318,14 +318,26 @@ export function Sales() {
                                     <div className="font-medium flex items-center gap-2">
                                         {selectedSale.payment_method === 'fib' && (
                                             <>
-                                                <img src="/icons/FIB.jpg" alt="FIB" className="w-5 h-5 rounded" />
+                                                <img src="/icons/FIB24x24.jpg" alt="FIB" className="w-5 h-5 rounded" />
                                                 FIB
                                             </>
                                         )}
                                         {selectedSale.payment_method === 'qicard' && (
                                             <>
-                                                <img src="/icons/QIcard.png" alt="QiCard" className="w-5 h-5 rounded" />
+                                                <img src="/icons/QIcard24x24.png" alt="QiCard" className="w-5 h-5 rounded" />
                                                 QiCard
+                                            </>
+                                        )}
+                                        {selectedSale.payment_method === 'zaincash' && (
+                                            <>
+                                                <img src="/icons/zain24x24.png" alt="ZainCash" className="w-5 h-5 rounded" />
+                                                ZainCash
+                                            </>
+                                        )}
+                                        {selectedSale.payment_method === 'fastpay' && (
+                                            <>
+                                                <img src="/icons/fastpay24x24.jpg" alt="FastPay" className="w-5 h-5 rounded" />
+                                                FastPay
                                             </>
                                         )}
                                         {(!selectedSale.payment_method || selectedSale.payment_method === 'cash') && (

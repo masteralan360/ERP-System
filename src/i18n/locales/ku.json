@@ -331,7 +331,8 @@
             "tryEnableDesc": "چالاککردنی نرخی لیرەی تورکی لە سیستمەکەدا.",
             "trySource": "سەرچاوەی لیرە/دینار",
             "forexfy_try": "Forexfy لیرە (بازاڕی ڕەش)",
-            "dolardinar_try": "DolarDinar.com لیرە (وەرقەی بازاڕ)"
+            "dolardinar_try": "DolarDinar.com لیرە (وەرقەی بازاڕ)",
+            "lastUpdated": "کاتی کۆتا ئەپدەیت"
         }
     },
     "sync": {
@@ -410,9 +411,17 @@
         "negotiatedPrice": "سعر التفاوض",
         "originalPriceLabel": "السعر الأصلي",
         "originalPriceDesc": " ",
-        "paymentMethod": "",
-        "digital": "",
-        "cash": ""
+        "paymentMethod": "ڕێگای پارەدان",
+        "digital": "دیجیتاڵ",
+        "cash": "کاش",
+        "currencyConverter": "گۆڕینەوەی دراو",
+        "convert": "گۆڕین",
+        "swap": "گۆڕینەوە",
+        "amount": "بڕ",
+        "from": "لە",
+        "to": "بۆ",
+        "result": "ئەنجام",
+        "backToPos": "گەڕانەوە بۆ فرۆشتن"
     },
     "sales": {
         "title": "مێژووی فرۆشتن",

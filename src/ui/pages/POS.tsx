@@ -68,7 +68,7 @@ export function POS() {
 
     // Payment Method State
     const [paymentType, setPaymentType] = useState<'cash' | 'digital'>('cash')
-    const [digitalProvider, setDigitalProvider] = useState<'fib' | 'qicard'>('fib')
+    const [digitalProvider, setDigitalProvider] = useState<'fib' | 'qicard' | 'zaincash' | 'fastpay'>('fib')
     // Filter products
     const filteredProducts = products.filter(
         (p) =>
@@ -969,7 +969,7 @@ export function POS() {
                                         title="FIB"
                                     >
                                         <img
-                                            src="/icons/FIB.jpg"
+                                            src="/icons/FIB24x24.jpg"
                                             alt="FIB"
                                             className="w-6 h-6 rounded"
                                         />
@@ -985,8 +985,42 @@ export function POS() {
                                         title="QiCard"
                                     >
                                         <img
-                                            src="/icons/QIcard.png"
+                                            src="/icons/QIcard24x24.png"
                                             alt="QiCard"
+                                            className="w-6 h-6 rounded"
+                                        />
+                                    </button>
+
+                                    <button
+                                        onClick={() => setDigitalProvider('zaincash')}
+                                        className={cn(
+                                            "p-1.5 rounded-md transition-colors flex items-center gap-1",
+                                            digitalProvider === 'zaincash'
+                                                ? "bg-background shadow-sm ring-1 ring-primary/30"
+                                                : "hover:bg-background/50 opacity-60"
+                                        )}
+                                        title="ZainCash"
+                                    >
+                                        <img
+                                            src="/icons/zain24x24.png"
+                                            alt="ZainCash"
+                                            className="w-6 h-6 rounded"
+                                        />
+                                    </button>
+
+                                    <button
+                                        onClick={() => setDigitalProvider('fastpay')}
+                                        className={cn(
+                                            "p-1.5 rounded-md transition-colors flex items-center gap-1",
+                                            digitalProvider === 'fastpay'
+                                                ? "bg-background shadow-sm ring-1 ring-primary/30"
+                                                : "hover:bg-background/50 opacity-60"
+                                        )}
+                                        title="FastPay"
+                                    >
+                                        <img
+                                            src="/icons/fastpay24x24.jpg"
+                                            alt="FastPay"
                                             className="w-6 h-6 rounded"
                                         />
                                     </button>

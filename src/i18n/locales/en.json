@@ -334,7 +334,8 @@
             "tryEnableDesc": "Enable TRY/IQD exchange rate in the system.",
             "trySource": "TRY/IQD Source",
             "forexfy_try": "Forexfy TRY/IQD (Black Market)",
-            "dolardinar_try": "DolarDinar.com TRY/IQD (Market Sheet)"
+            "dolardinar_try": "DolarDinar.com TRY/IQD (Market Sheet)",
+            "lastUpdated": "Last Updated"
         }
     },
     "sync": {
@@ -417,7 +418,15 @@
         "originalPriceDesc": " ",
         "paymentMethod": "Payment Method",
         "digital": "Digital",
-        "cash": "Cash"
+        "cash": "Cash",
+        "currencyConverter": "Currency Converter",
+        "convert": "Convert",
+        "swap": "Swap",
+        "amount": "Amount",
+        "from": "From",
+        "to": "To",
+        "result": "Result",
+        "backToPos": "Back to POS"
     },
     "sales": {
         "title": "Sales History",
@@ -429,6 +438,7 @@
         "total": "Total",
         "details": "Sale Details",
         "id": "Sale ID",
+        "paymentMethod": "Payment Method",
         "receipt": {
             "thankYou": "Thank you for shopping with us!",
             "keepRecord": "Please keep this receipt for your records."
