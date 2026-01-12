@@ -14,6 +14,7 @@ export interface WorkspaceFeatures {
     default_currency: CurrencyCode
     iqd_display_preference: IQDDisplayPreference
     eur_conversion_enabled: boolean
+    try_conversion_enabled: boolean
 }
 
 interface WorkspaceContextType {
@@ -21,7 +22,7 @@ interface WorkspaceContextType {
     isLoading: boolean
     hasFeature: (feature: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices') => boolean
     refreshFeatures: () => Promise<void>
-    updateSettings: (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled'>>) => Promise<void>
+    updateSettings: (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled' | 'try_conversion_enabled'>>) => Promise<void>
 }
 
 const defaultFeatures: WorkspaceFeatures = {
@@ -32,7 +33,8 @@ const defaultFeatures: WorkspaceFeatures = {
     is_configured: true,
     default_currency: 'usd',
     iqd_display_preference: 'IQD',
-    eur_conversion_enabled: false
+    eur_conversion_enabled: false,
+    try_conversion_enabled: false
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined)
@@ -65,7 +67,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                         is_configured: true,
                         default_currency: localWorkspace.default_currency,
                         iqd_display_preference: localWorkspace.iqd_display_preference,
-                        eur_conversion_enabled: (localWorkspace as any).eur_conversion_enabled ?? false
+                        eur_conversion_enabled: (localWorkspace as any).eur_conversion_enabled ?? false,
+                        try_conversion_enabled: (localWorkspace as any).try_conversion_enabled ?? false
                     })
                 } else {
                     setFeatures(defaultFeatures)
@@ -80,7 +83,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                     is_configured: featureData.is_configured ?? false,
                     default_currency: featureData.default_currency || 'usd',
                     iqd_display_preference: featureData.iqd_display_preference || 'IQD',
-                    eur_conversion_enabled: featureData.eur_conversion_enabled ?? false
+                    eur_conversion_enabled: featureData.eur_conversion_enabled ?? false,
+                    try_conversion_enabled: featureData.try_conversion_enabled ?? false
                 }
                 setFeatures(fetchedFeatures)
 
@@ -128,7 +132,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         await fetchFeatures()
     }
 
-    const updateSettings = async (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled'>>) => {
+    const updateSettings = async (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled' | 'try_conversion_enabled'>>) => {
         const workspaceId = user?.workspaceId
         if (!workspaceId) return
 

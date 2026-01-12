@@ -4,7 +4,7 @@ import { useWorkspace } from '@/workspace'
 import { cn } from '@/lib/utils'
 
 export function ExchangeRateIndicator() {
-    const { exchangeData, eurRates, status, lastUpdated, refresh } = useExchangeRate()
+    const { exchangeData, eurRates, tryRates, status, lastUpdated, refresh } = useExchangeRate()
     const { features } = useWorkspace()
 
     return (
@@ -35,6 +35,22 @@ export function ExchangeRateIndicator() {
                                 <div className="flex items-center gap-3">
                                     <span className="w-px h-3 bg-current/20" />
                                     <span>EUR/IQD: {eurRates.eur_iqd.rate.toLocaleString()}</span>
+                                    {eurRates.eur_iqd.isFallback && (
+                                        <span className="text-xs opacity-70 font-normal ml-0.5">
+                                            ({eurRates.eur_iqd.source === 'forexfy' ? 'Forexfy' : 'DolarDinar'})
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                            {features.try_conversion_enabled && tryRates.try_iqd && (
+                                <div className="flex items-center gap-3">
+                                    <span className="w-px h-3 bg-current/20" />
+                                    <span>TRY/IQD: {tryRates.try_iqd.rate.toLocaleString()}</span>
+                                    {tryRates.try_iqd.isFallback && (
+                                        <span className="text-xs opacity-70 font-normal ml-0.5">
+                                            ({tryRates.try_iqd.source === 'forexfy' ? 'Forexfy' : 'DolarDinar'})
+                                        </span>
+                                    )}
                                 </div>
                             )}
                         </>

@@ -5,7 +5,7 @@ export type SyncStatus = 'pending' | 'synced' | 'conflict'
 
 export type UserRole = 'admin' | 'staff' | 'viewer'
 
-export type CurrencyCode = 'usd' | 'eur' | 'iqd'
+export type CurrencyCode = 'usd' | 'eur' | 'iqd' | 'try'
 
 export type IQDDisplayPreference = 'IQD' | 'د.ع'
 
@@ -154,6 +154,7 @@ export interface Workspace extends BaseEntity {
     default_currency: CurrencyCode
     iqd_display_preference: IQDDisplayPreference
     eur_conversion_enabled?: boolean
+    try_conversion_enabled?: boolean
 }
 
 export interface OfflineMutation {

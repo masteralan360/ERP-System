@@ -322,7 +322,12 @@
             "eurEnable": "Enable EUR/IQD Exchange Rate",
             "eurEnableDesc": "Enable EUR/IQD exchange rate in the system.",
             "eurSource": "EUR/IQD Source",
-            "eurSourceAdminOnly": "Forexfy and DolarDinar are currently the supported sources for Euro rates."
+            "eurSourceAdminOnly": "Forexfy and DolarDinar are currently the supported sources for Euro rates.",
+            "tryEnable": "Enable TRY/IQD Exchange Rate",
+            "tryEnableDesc": "Enable TRY/IQD exchange rate in the system.",
+            "trySource": "TRY/IQD Source",
+            "forexfy_try": "Forexfy TRY/IQD (Black Market)",
+            "dolardinar_try": "DolarDinar.com TRY/IQD (Market Sheet)"
         }
     },
     "sync": {
@@ -397,7 +402,9 @@
         "cameraNotFound": "Camera not found",
         "permissionDenied": "Camera permission denied",
         "exchangeRateError": "Exchange rate unavailable. Checkout blocked.",
-        "eurDisabled": "EURO conversion is disabled."
+        "exchangeRateError": "Exchange rate unavailable. Checkout blocked.",
+        "eurDisabled": "EURO conversion is disabled.",
+        "tryDisabled": "TRY conversion is disabled."
     },
     "sales": {
         "title": "Sales History",

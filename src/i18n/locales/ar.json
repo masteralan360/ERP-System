@@ -313,8 +313,13 @@
             "dolardinar_eur": "DolarDinar.com EUR/IQD (نشرة السوق)",
             "eurEnable": "تمكين سعر صرف EUR/IQD",
             "eurEnableDesc": "تمكين سعر صرف EUR/IQD في النظام.",
-            "eurSource": "مصدر EUR/IQD",
-            "eurSourceAdminOnly": "مصدر EUR/IQD"
+            "eurSource": "مصدر اليورو/دينار",
+            "eurSourceAdminOnly": "فوركس فاي و دولار دينار هما المصادر المدعومة حالياً لليورو.",
+            "tryEnable": "تفعيل صرف الليرة التركية/دينار",
+            "tryEnableDesc": "تفعيل صرف الليرة التركية في النظام.",
+            "trySource": "مصدر الليرة التركية/دينار",
+            "forexfy_try": "Forexfy الليرة التركية (السوق السوداء)",
+            "dolardinar_try": "DolarDinar.com ليرة (ورقة السوق)"
         }
     },
     "sync": {
@@ -369,6 +374,8 @@
     "pos": {
         "error": "حدث خطأ",
         "exchangeRateError": "سعر الصرف غير متاح. تم إيقاف الدفع.",
+        "eurDisabled": "تحويل اليورو معطل.",
+        "tryDisabled": "تحويل الليرة التركية معطل.",
         "title": "نقطة البيع",
         "searchPlaceholder": "البحث عن المنتجات...",
         "currentSale": "البيع الحالي",

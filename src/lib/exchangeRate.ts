@@ -31,6 +31,12 @@ export async function fetchUSDToIQDRate(primarySource?: ExchangeRateSource): Pro
             if (currentSource === 'xeiqd') rate = await fetchFromXEIQD();
             else if (currentSource === 'forexfy') rate = await fetchFromForexfy();
             else if (currentSource === 'dolardinar') rate = await fetchFromDolarDinar();
+
+            if (rate < 100000) {
+                console.warn(`[ExchangeRate] Rate from ${currentSource} is suspiciously low (${rate}), triggering fallback.`);
+                throw new Error('Rate sanity check failed (< 100000)');
+            }
+
             console.log(`[ExchangeRate] ${currentSource} Success! Rate:`, rate);
             return { rate, source: currentSource, isFallback };
         } catch (error) {
@@ -62,6 +68,12 @@ export async function fetchEURToIQDRate(primarySource?: ExchangeRateSource): Pro
             console.log(`[ExchangeRate] Fetching EUR from ${isFallback ? 'Fallback' : 'Primary'} Source (${currentSource})...`);
             const usdEur = await fetchCrossRate(currentSource, 'USD-to-EUR');
             const eurIqd = await fetchCrossRate(currentSource, 'EUR-to-IQD');
+
+            if (eurIqd < 100000) {
+                console.warn(`[ExchangeRate] EUR Rate from ${currentSource} is suspiciously low (${eurIqd}), triggering fallback.`);
+                throw new Error('EUR Rate sanity check failed (< 100000)');
+            }
+
             console.log(`[ExchangeRate] EUR ${currentSource} Success!`, { usdEur, eurIqd });
             return { usdEur, eurIqd, source: currentSource, isFallback };
         } catch (error) {
@@ -71,6 +83,64 @@ export async function fetchEURToIQDRate(primarySource?: ExchangeRateSource): Pro
 
     throw new Error('All EUR exchange rate sources failed');
 }
+
+export async function fetchTRYToIQDRate(primarySource?: ExchangeRateSource): Promise<{ usdTry: number, tryIqd: number, source: ExchangeRateSource, isFallback: boolean }> {
+    if (!navigator.onLine) {
+        throw new Error('Offline: Cannot fetch live exchange rate');
+    }
+
+    const favoredSource = primarySource || (localStorage.getItem('primary_try_exchange_rate_source') as ExchangeRateSource) || 'forexfy';
+
+    const sources: ExchangeRateSource[] = [
+        favoredSource,
+        ...(['forexfy', 'dolardinar'] as ExchangeRateSource[]).filter(s => s !== favoredSource)
+    ];
+
+    for (let i = 0; i < sources.length; i++) {
+        const currentSource = sources[i];
+        const isFallback = i > 0;
+
+        try {
+            console.log(`[ExchangeRate] Fetching TRY from ${isFallback ? 'Fallback' : 'Primary'} Source (${currentSource})...`);
+
+            // For TRY we need both USD-TRY (for cross calc if needed) and TRY-IQD
+            // If source is Forexfy, we can get TRY-IQD directly from the blackmarket page
+
+            let tryIqd = 0;
+            let usdTry = 0;
+
+            if (currentSource === 'forexfy') {
+                tryIqd = await fetchEgRate('TRY-to-IQD');
+                // We also need USD-TRY for internal conversions if needed, usually we can get it from Forexfy too
+                // or approximate it. Let's try to fetch it.
+                try {
+                    usdTry = await fetchEgRate('USD-to-TRY');
+                } catch (e) {
+                    console.warn('[ExchangeRate] Failed to fetch USD-to-TRY from Forexfy, calculating from USD-IQD/TRY-IQD', e);
+                    // Fallback calculation: USD-TRY = USD-IQD / TRY-IQD
+                    const usdIqd = await fetchUSDToIQDRate('forexfy');
+                    if (tryIqd > 0) usdTry = Math.round((usdIqd.rate / tryIqd) * 100) / 100; // keep logical precision
+                }
+            } else if (currentSource === 'dolardinar') {
+                // DolarDinar usually has a list of currencies against IQD
+                // We need to implement fetch from DolarDinar for TRY
+                const result = await fetchFromDolarDinar('TRY');
+                // DolarDinar result is TRY-to-IQD rate directly
+                tryIqd = result;
+                usdTry = await fetchCrossRate('dolardinar', 'USD-to-TRY');
+            }
+
+            console.log(`[ExchangeRate] TRY ${currentSource} Success!`, { usdTry, tryIqd });
+            return { usdTry, tryIqd, source: currentSource, isFallback };
+        } catch (error) {
+            console.warn(`[ExchangeRate] TRY Source (${currentSource}) Failed:`, error);
+        }
+    }
+
+    throw new Error('All TRY exchange rate sources failed');
+}
+
+export type ExchangePath = 'USD-to-IQD' | 'USD-to-EUR' | 'EUR-to-IQD' | 'USD-to-TRY' | 'TRY-to-IQD';
 
 async function fetchFromXEIQD(): Promise<number> {
     const response = await fetch('/api-xeiqd', { cache: 'no-store' });
@@ -190,24 +260,41 @@ async function fetchFromForexfy(): Promise<number> {
     throw new Error('Could not extract Sell Price from forexfy.app after 4 attempts');
 }
 
-async function fetchFromDolarDinar(): Promise<number> {
+async function fetchFromDolarDinar(currencyCode: string = 'IQD'): Promise<number> {
     const response = await fetch('https://opensheet.elk.sh/1VqEZiLBr7dYeoH2wkeUH3D9zNe61dw-_RPxj6MH_Xw0/Today', { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
     const data = await response.json();
 
-    // Find IQD row
-    const iqdRow = data.find((r: any) => r.Currency === 'IQD');
-    if (!iqdRow || !iqdRow.Rate) throw new Error('IQD rate not found in DolarDinar sheet');
+    // Find row
+    // DolarDinar sheet usually has 'Currency' column with values like 'IQD', 'EUR', 'TRY' (or 'Lira'?)
+    // We need to match robustly. Common codes: IQD (for USD?), EUR, TRY.
+    // Actually for USD it might be row with Currency='USD' or empty? 
+    // In original code: r.Currency === 'IQD' was used for USD-IQD rate? Wait.
+    // Original code: `const iqdRow = data.find((r: any) => r.Currency === 'IQD');` -> returns Rate.
+    // Usually these sheets list foreign currencies against IQD. So "USD" row gives USD/IQD.
+    // "EUR" row gives EUR/IQD. "TRY" row gives TRY/IQD.
+    // IMPORTANT: The previous code looked for 'IQD' to get USD rate? That seems odd if the column is Currency. 
+    // Let's assume the previous code was correct for USD (maybe matched a label).
+    // Let's look at the implementation again: `r.Currency === 'IQD'` -> Rate.
+    // If the sheet lists "Currency" as the foreign currency, then 'IQD' would be wrong for USD.
+    // Unless the column is "Target" and Source is implied?
+    // Let's stick to what worked for USD (IQD key) but for others we might need to search 'TRY' or 'TUR'.
+
+    let targetKey = currencyCode;
+    if (currencyCode === 'USD') targetKey = 'IQD'; // Legacy mapping based on existing code
+
+    const row = data.find((r: any) => r.Currency === targetKey || r.Currency === currencyCode);
+    if (!row || !row.Rate) throw new Error(`${currencyCode} rate not found in DolarDinar sheet`);
 
     // Normalize: remove . (thousands), replace , with . (decimal)
-    const normalizedRate = parseFloat(iqdRow.Rate.replace(/\./g, '').replace(/,/g, '.'));
-    if (isNaN(normalizedRate)) throw new Error('Invalid IQD rate from DolarDinar');
+    const normalizedRate = parseFloat(row.Rate.replace(/\./g, '').replace(/,/g, '.'));
+    if (isNaN(normalizedRate)) throw new Error(`Invalid ${currencyCode} rate from DolarDinar`);
 
     // System uses integers (1450.00 -> 145000)
     return Math.round(normalizedRate * 100);
 }
 
-export type ExchangePath = 'USD-to-IQD' | 'USD-to-EUR' | 'EUR-to-IQD';
+
 
 async function fetchEgRate(path: ExchangePath): Promise<number> {
     const response = await fetch(`/api-forexfy/en/currency/${path}/blackMarket`, { cache: 'no-store' });
@@ -282,24 +369,20 @@ export async function fetchCrossRate(source: ExchangeRateSource, path: ExchangeP
     }
 
     if (source === 'dolardinar') {
-        const response = await fetch('https://opensheet.elk.sh/1VqEZiLBr7dYeoH2wkeUH3D9zNe61dw-_RPxj6MH_Xw0/Today', { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-        const data = await response.json();
-
-        const getVal = (curr: string) => {
-            const row = data.find((r: any) => r.Currency === curr);
-            if (!row || !row.Rate) throw new Error(`${curr} rate not found`);
-            return parseFloat(row.Rate.replace(/\./g, '').replace(/,/g, '.'));
-        };
-
         if (path === 'USD-to-IQD') {
-            return Math.round(getVal('IQD') * 100);
+            return await fetchFromDolarDinar('USD');
         } else if (path === 'USD-to-EUR') {
-            return Math.round(getVal('EUR') * 100);
+            const usd = await fetchFromDolarDinar('USD');
+            const eur = await fetchFromDolarDinar('EUR');
+            return Math.round((usd / eur) * 100); // Approximation
         } else if (path === 'EUR-to-IQD') {
-            const iqd = getVal('IQD');
-            const eur = getVal('EUR');
-            return Math.round((iqd / eur) * 100);
+            return await fetchFromDolarDinar('EUR');
+        } else if (path === 'TRY-to-IQD') {
+            return await fetchFromDolarDinar('TRY');
+        } else if (path === 'USD-to-TRY') {
+            const usd = await fetchFromDolarDinar('USD');
+            const tryRate = await fetchFromDolarDinar('TRY');
+            return Math.round((usd / tryRate) * 100);
         }
     }
 

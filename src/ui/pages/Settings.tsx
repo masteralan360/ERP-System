@@ -23,6 +23,7 @@ export function Settings() {
     const [barcodeHotkey, setBarcodeHotkey] = useState(localStorage.getItem('barcode_hotkey') || 'k')
     const [exchangeRateSource, setExchangeRateSource] = useState(localStorage.getItem('primary_exchange_rate_source') || 'xeiqd')
     const [eurExchangeRateSource, setEurExchangeRateSource] = useState(localStorage.getItem('primary_eur_exchange_rate_source') || 'forexfy')
+    const [tryExchangeRateSource, setTryExchangeRateSource] = useState(localStorage.getItem('primary_try_exchange_rate_source') || 'forexfy')
 
     const handleHotkeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.slice(0, 1).toLowerCase()
@@ -46,6 +47,12 @@ export function Settings() {
     const handleEurExchangeRateSourceChange = (val: string) => {
         setEurExchangeRateSource(val)
         localStorage.setItem('primary_eur_exchange_rate_source', val)
+        window.dispatchEvent(new CustomEvent('exchange-rate-refresh'))
+    }
+
+    const handleTryExchangeRateSourceChange = (val: string) => {
+        setTryExchangeRateSource(val)
+        localStorage.setItem('primary_try_exchange_rate_source', val)
         window.dispatchEvent(new CustomEvent('exchange-rate-refresh'))
     }
 
@@ -250,6 +257,41 @@ export function Settings() {
                                             </p>
                                         </div>
                                     )}
+
+                                    <div className="pt-2 space-y-4 border-t border-border/50">
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-base">{t('settings.exchangeRate.tryEnable') || 'Enable TRY Support'}</Label>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {t('settings.exchangeRate.tryEnableDesc') || 'Allow POS to handle TRY products and conversions.'}
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={features.try_conversion_enabled}
+                                                onCheckedChange={(val: boolean) => updateSettings({ try_conversion_enabled: val })}
+                                                disabled={user?.role !== 'admin'}
+                                            />
+                                        </div>
+
+                                        {features.try_conversion_enabled && (
+                                            <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                                                <Label>{t('settings.exchangeRate.trySource') || 'TRY Exchange Source'}</Label>
+                                                <Select value={tryExchangeRateSource} onValueChange={handleTryExchangeRateSourceChange}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="forexfy">
+                                                            {t('settings.exchangeRate.forexfy_try') || 'Forexfy TRY/IQD (Black Market)'}
+                                                        </SelectItem>
+                                                        <SelectItem value="dolardinar">
+                                                            {t('settings.exchangeRate.dolardinar_try') || 'DolarDinar.com TRY/IQD (Market Sheet)'}
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>

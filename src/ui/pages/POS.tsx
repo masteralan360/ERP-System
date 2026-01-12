@@ -76,7 +76,7 @@ export function POS() {
     }
 
     // Exchange Rate for advisory display and calculations
-    const { exchangeData, eurRates, status, refresh: refreshExchangeRate } = useExchangeRate()
+    const { exchangeData, eurRates, tryRates, status, refresh: refreshExchangeRate } = useExchangeRate()
     const settlementCurrency = features.default_currency || 'usd'
 
     useEffect(() => {
@@ -109,6 +109,15 @@ export function POS() {
             const r = getRate('eur_iqd'); if (!r) return amount; converted = amount * r
         } else if (from === 'iqd' && to === 'eur') {
             const r = getRate('eur_iqd'); if (!r) return amount; converted = amount / r
+        } else if (from === 'try' && to === 'iqd') {
+            // Use TRY/IQD directly
+            if (tryRates.try_iqd) converted = amount * (tryRates.try_iqd.rate / 100);
+        } else if (from === 'iqd' && to === 'try') {
+            if (tryRates.try_iqd) converted = amount / (tryRates.try_iqd.rate / 100);
+        } else if (from === 'usd' && to === 'try') {
+            if (tryRates.usd_try) converted = amount * (tryRates.usd_try.rate / 100);
+        } else if (from === 'try' && to === 'usd') {
+            if (tryRates.usd_try) converted = amount / (tryRates.usd_try.rate / 100);
         }
         // CHAINED PATHS (If needed based on default_currency)
         else if (from === 'usd' && to === 'iqd') { /* already handled */ }
@@ -184,6 +193,15 @@ export function POS() {
                 variant: 'destructive',
                 title: t('messages.error'),
                 description: t('pos.eurDisabled') || 'Euro products represent a currency that is currently disabled in settings.',
+            })
+            return
+        }
+
+        if (product.currency === 'try' && !features.try_conversion_enabled) {
+            toast({
+                variant: 'destructive',
+                title: t('messages.error'),
+                description: t('pos.tryDisabled') || 'TRY conversion is disabled.',
             })
             return
         }
@@ -340,6 +358,24 @@ export function POS() {
                     rate: eurRates.usd_eur.rate,
                     source: eurRates.usd_eur.source,
                     timestamp: eurRates.usd_eur.timestamp
+                })
+            }
+        }
+
+        if (usedCurrencies.has('try')) {
+            if (settlementCurrency === 'iqd' && tryRates.try_iqd) {
+                exchangeRatesSnapshot.push({
+                    pair: 'TRY/IQD',
+                    rate: tryRates.try_iqd.rate,
+                    source: tryRates.try_iqd.source,
+                    timestamp: tryRates.try_iqd.timestamp
+                })
+            } else if (settlementCurrency === 'usd' && tryRates.usd_try) {
+                exchangeRatesSnapshot.push({
+                    pair: 'USD/TRY',
+                    rate: tryRates.usd_try.rate,
+                    source: tryRates.usd_try.source,
+                    timestamp: tryRates.usd_try.timestamp
                 })
             }
         }
@@ -707,6 +743,25 @@ export function POS() {
                                         <span className="opacity-60">100 EUR =</span>
                                         <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
                                             {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(eurRates.eur_iqd.rate, 'iqd', features.iqd_display_preference)}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TRY Rate (Conditional) */}
+                            {features.try_conversion_enabled && tryRates.try_iqd && (
+                                <div className={cn(
+                                    "flex justify-between items-center text-[11px]",
+                                    (exchangeData || (features.eur_conversion_enabled && eurRates.eur_iqd)) && "pt-1.5 border-t border-primary/5"
+                                )}>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-primary/80 uppercase">TRY/IQD</span>
+                                        <span className="opacity-50 text-[10px] uppercase leading-none">{tryRates.try_iqd.source}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="opacity-60">100 TRY =</span>
+                                        <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
+                                            {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(tryRates.try_iqd.rate, 'iqd', features.iqd_display_preference)}
                                         </span>
                                     </div>
                                 </div>

@@ -318,8 +318,13 @@
             "dolardinar_eur": "DolarDinar.com EUR/IQD (نیشاندەری بازاڕ)",
             "eurEnable": "چالاککردنی نرخی ئالوگۆڕی EUR/IQD",
             "eurEnableDesc": "چالاککردنی نرخی ئالوگۆڕی EUR/IQD لە کۆمەڵەی سیستمەکەدا.",
-            "eurSource": "سەرچاوەی EUR/IQD",
-            "eurSourceAdminOnly": "سەرچاوەی EUR/IQD"
+            "eurSource": "سەرچاوەی یۆرۆ/دینار",
+            "eurSourceAdminOnly": "Forexfy و DolarDinar تەنها سەرچاوەن بۆ یۆرۆ.",
+            "tryEnable": "چالاککردنی گۆڕینەوەی لیرەی تورکی",
+            "tryEnableDesc": "چالاککردنی نرخی لیرەی تورکی لە سیستمەکەدا.",
+            "trySource": "سەرچاوەی لیرە/دینار",
+            "forexfy_try": "Forexfy لیرە (بازاڕی ڕەش)",
+            "dolardinar_try": "DolarDinar.com لیرە (وەرقەی بازاڕ)"
         }
     },
     "sync": {
@@ -373,7 +378,6 @@
     },
     "pos": {
         "title": "خاڵی فرۆشتن",
-        "exchangeRateError": "نرخی گۆڕینەوە بەردەست نییە. جێبەجێکردنی کڕین ڕاگیرا.",
         "searchPlaceholder": "گەڕان بۆ بەرهەم...",
         "currentSale": "فرۆشتنی ئێستا",
         "checkout": "کڕین",
@@ -389,6 +393,9 @@
         "scanDelayDesc": "دواکەوتن لە نێوان سکانکردنە دووبارەبووەکانی هەمان بابەت.",
         "selectCamera": "کامێرا هەڵبژێرە",
         "scannerEnabled": "سکانەر چالاکە",
+        "exchangeRateError": "نرخی گۆڕینەوە بەردەست نییە. پارەدان ڕاگیراوە.",
+        "eurDisabled": "گۆڕینەوەی یۆرۆ ناچالاکە.",
+        "tryDisabled": "گۆڕینەوەی لیرە ناچالاکە.",
         "scannerDisabled": "سکانەر ناچالاکە",
         "cameraNotFound": "کامێرا نەدۆزرایەوە",
         "permissionDenied": "دەسەڵاتی کامێرا ڕەتکرایەوە"

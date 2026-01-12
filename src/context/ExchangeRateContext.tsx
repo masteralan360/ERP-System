@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { fetchUSDToIQDRate, fetchEURToIQDRate, type ExchangeRateResult } from '@/lib/exchangeRate'
+import { fetchUSDToIQDRate, fetchEURToIQDRate, fetchTRYToIQDRate, type ExchangeRateResult } from '@/lib/exchangeRate'
 import { useWorkspace } from '@/workspace'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 
@@ -7,6 +7,7 @@ export interface ExchangeSnapshot {
     rate: number
     source: string
     timestamp: string
+    isFallback: boolean
 }
 
 interface ExchangeRateContextType {
@@ -14,6 +15,10 @@ interface ExchangeRateContextType {
     eurRates: {
         usd_eur: ExchangeSnapshot | null
         eur_iqd: ExchangeSnapshot | null
+    }
+    tryRates: {
+        usd_try: ExchangeSnapshot | null
+        try_iqd: ExchangeSnapshot | null
     }
     status: 'loading' | 'live' | 'error'
     lastUpdated: string | null
@@ -28,6 +33,10 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
     const [eurRates, setEurRates] = useState<ExchangeRateContextType['eurRates']>({
         usd_eur: null,
         eur_iqd: null
+    })
+    const [tryRates, setTryRates] = useState<ExchangeRateContextType['tryRates']>({
+        usd_try: null,
+        try_iqd: null
     })
     const [status, setStatus] = useState<'loading' | 'live' | 'error'>('loading')
     const [lastUpdated, setLastUpdated] = useState<string | null>(null)
@@ -50,11 +59,27 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
                     const timestamp = new Date().toISOString()
 
                     setEurRates({
-                        usd_eur: { rate: eurResult.usdEur, source: eurResult.source, timestamp },
-                        eur_iqd: { rate: eurResult.eurIqd, source: eurResult.source, timestamp }
+                        usd_eur: { rate: eurResult.usdEur, source: eurResult.source, timestamp, isFallback: eurResult.isFallback },
+                        eur_iqd: { rate: eurResult.eurIqd, source: eurResult.source, timestamp, isFallback: eurResult.isFallback }
                     })
                 } catch (error) {
                     console.error('ExchangeRateProvider: Failed to fetch EUR rates', error)
+                }
+            }
+
+            // 3. Fetch TRY rates if enabled
+            if (features.try_conversion_enabled) {
+                try {
+                    // We need to import fetchTRYToIQDRate
+                    const tryResult = await fetchTRYToIQDRate()
+                    const timestamp = new Date().toISOString()
+
+                    setTryRates({
+                        usd_try: { rate: tryResult.usdTry, source: tryResult.source, timestamp, isFallback: tryResult.isFallback },
+                        try_iqd: { rate: tryResult.tryIqd, source: tryResult.source, timestamp, isFallback: tryResult.isFallback }
+                    })
+                } catch (error) {
+                    console.error('ExchangeRateProvider: Failed to fetch TRY rates', error)
                 }
             }
 
@@ -64,7 +89,7 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
             console.error('ExchangeRateProvider: Failed to fetch rate', error)
             setStatus('error')
         }
-    }, [features.eur_conversion_enabled])
+    }, [features.eur_conversion_enabled, features.try_conversion_enabled])
 
     useEffect(() => {
         refresh()
@@ -80,7 +105,7 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
     }, [refresh])
 
     return (
-        <ExchangeRateContext.Provider value={{ exchangeData, eurRates, status: effectiveStatus, lastUpdated, refresh }}>
+        <ExchangeRateContext.Provider value={{ exchangeData, eurRates, tryRates, status: effectiveStatus, lastUpdated, refresh }}>
             {children}
         </ExchangeRateContext.Provider>
     )

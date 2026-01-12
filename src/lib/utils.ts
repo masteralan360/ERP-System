@@ -24,6 +24,13 @@ export function formatCurrency(
         }).format(amount)
     }
 
+    if (code === 'try') {
+        return new Intl.NumberFormat('tr-TR', {
+            style: 'currency',
+            currency: 'TRY',
+        }).format(amount)
+    }
+
     // Default to USD
     return new Intl.NumberFormat('en-US', {
         style: 'currency',

@@ -20,6 +20,7 @@ export function CurrencySelector({ value, onChange, label, iqdDisplayPreference 
                 <SelectContent>
                     <SelectItem value="usd">USD ($)</SelectItem>
                     <SelectItem value="eur">EUR (€)</SelectItem>
+                    <SelectItem value="try">TRY (₺)</SelectItem>
                     <SelectItem value="iqd">
                         {iqdDisplayPreference === 'IQD' ? 'IQD' : 'د.ع (IQD)'}
                     </SelectItem>
