@@ -119,21 +119,34 @@ export function POS() {
         } else if (from === 'try' && to === 'usd') {
             if (tryRates.usd_try) converted = amount / (tryRates.usd_try.rate / 100);
         }
+        // TRY <-> EUR: Chain through IQD
+        else if (from === 'try' && to === 'eur') {
+            // TRY -> IQD -> EUR
+            const tryIqdRate = tryRates.try_iqd ? tryRates.try_iqd.rate / 100 : null;
+            const eurIqdRate = eurRates.eur_iqd ? eurRates.eur_iqd.rate / 100 : null;
+            if (tryIqdRate && eurIqdRate) {
+                const inIqd = amount * tryIqdRate;
+                converted = inIqd / eurIqdRate;
+            }
+        } else if (from === 'eur' && to === 'try') {
+            // EUR -> IQD -> TRY
+            const eurIqdRate = eurRates.eur_iqd ? eurRates.eur_iqd.rate / 100 : null;
+            const tryIqdRate = tryRates.try_iqd ? tryRates.try_iqd.rate / 100 : null;
+            if (eurIqdRate && tryIqdRate) {
+                const inIqd = amount * eurIqdRate;
+                converted = inIqd / tryIqdRate;
+            }
+        }
         // CHAINED PATHS (If needed based on default_currency)
-        else if (from === 'usd' && to === 'iqd') { /* already handled */ }
-        else if (from === 'iqd' && to === 'usd') { /* already handled */ }
-        // ... more chains if needed, e.g. IQD -> USD -> EUR
         else if (from === 'iqd' && to === 'eur') {
             const r1 = getRate('usd_iqd'); const r2 = getRate('usd_eur')
             if (r1 && r2) converted = (amount / r1) * r2
-        } else if (from === 'eur' && to === 'iqd') {
-            // we have direct EUR/IQD now from forexfy
         }
 
         // Rounding rules
         if (to === 'iqd') return Math.round(converted)
         return Math.round(converted * 100) / 100
-    }, [exchangeData, eurRates])
+    }, [exchangeData, eurRates, tryRates])
 
     // Calculate totals
     const totalAmount = cart.reduce((sum, item) => {
@@ -379,6 +392,38 @@ export function POS() {
                 })
             }
         }
+
+        // Handle TRY settlement with USD/EUR products - need IQD bridge rates
+        if (settlementCurrency === 'try') {
+            // Always add TRY/IQD for cost conversion chaining
+            if (tryRates.try_iqd && !exchangeRatesSnapshot.find(s => s.pair === 'TRY/IQD')) {
+                exchangeRatesSnapshot.push({
+                    pair: 'TRY/IQD',
+                    rate: tryRates.try_iqd.rate,
+                    source: tryRates.try_iqd.source,
+                    timestamp: tryRates.try_iqd.timestamp
+                })
+            }
+            // Add USD/IQD if USD products in cart
+            if (usedCurrencies.has('usd') && exchangeData && !exchangeRatesSnapshot.find(s => s.pair === 'USD/IQD')) {
+                exchangeRatesSnapshot.push({
+                    pair: 'USD/IQD',
+                    rate: exchangeData.rate,
+                    source: exchangeData.source,
+                    timestamp: exchangeData.timestamp || new Date().toISOString()
+                })
+            }
+            // Add EUR/IQD if EUR products in cart
+            if (usedCurrencies.has('eur') && eurRates.eur_iqd && !exchangeRatesSnapshot.find(s => s.pair === 'EUR/IQD')) {
+                exchangeRatesSnapshot.push({
+                    pair: 'EUR/IQD',
+                    rate: eurRates.eur_iqd.rate,
+                    source: eurRates.eur_iqd.source,
+                    timestamp: eurRates.eur_iqd.timestamp
+                })
+            }
+        }
+
         // Handle IQD items settled in USD/EUR if applicable
         if (usedCurrencies.has('iqd') && settlementCurrency !== 'iqd' && exchangeData) {
             // We need USD/IQD for IQD -> USD conversion
@@ -396,6 +441,14 @@ export function POS() {
                     rate: eurRates.usd_eur.rate,
                     source: eurRates.usd_eur.source,
                     timestamp: eurRates.usd_eur.timestamp
+                })
+            }
+            if (settlementCurrency === 'try' && tryRates.try_iqd && !exchangeRatesSnapshot.find(s => s.pair === 'TRY/IQD')) {
+                exchangeRatesSnapshot.push({
+                    pair: 'TRY/IQD',
+                    rate: tryRates.try_iqd.rate,
+                    source: tryRates.try_iqd.source,
+                    timestamp: tryRates.try_iqd.timestamp
                 })
             }
         }

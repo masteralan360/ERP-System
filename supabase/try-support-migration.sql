@@ -41,7 +41,7 @@ BEGIN
 END;
 $$;
 
--- 3. Update complete_sale RPC to handle try products validation
+-- 3. Update complete_sale RPC to handle try products validation and auto-calculate cost
 DROP FUNCTION IF EXISTS public.complete_sale(JSONB);
 CREATE OR REPLACE FUNCTION public.complete_sale(payload JSONB)
 RETURNS JSONB
@@ -56,6 +56,12 @@ DECLARE
     v_allow_pos BOOLEAN;
     v_eur_enabled BOOLEAN;
     v_try_enabled BOOLEAN;
+    v_product RECORD;
+    v_cost_price NUMERIC;
+    v_converted_cost_price NUMERIC;
+    v_settlement_currency TEXT;
+    v_original_currency TEXT;
+    v_rate_data JSONB;
 BEGIN
     -- Get current user's workspace
     SELECT workspace_id INTO p_workspace_id 
@@ -96,6 +102,7 @@ BEGIN
     END IF;
 
     total_sale_amount := (payload->>'total_amount')::NUMERIC;
+    v_settlement_currency := COALESCE(payload->>'settlement_currency', 'usd');
 
     -- Insert Sale Record with snapshot metadata
     INSERT INTO public.sales (
@@ -115,11 +122,11 @@ BEGIN
         p_workspace_id, 
         auth.uid(), 
         total_sale_amount, 
-        COALESCE(payload->>'settlement_currency', 'usd'),
-        COALESCE(payload->>'exchange_source', 'mixed'), -- For multi-source/eur sales
-        COALESCE((payload->>'exchange_rate')::NUMERIC, 0), -- Backward compatibility for IQD/USD only
+        v_settlement_currency,
+        COALESCE(payload->>'exchange_source', 'mixed'),
+        COALESCE((payload->>'exchange_rate')::NUMERIC, 0),
         COALESCE((payload->>'exchange_rate_timestamp')::TIMESTAMPTZ, NOW()),
-        COALESCE(payload->'exchange_rates', '[]'::jsonb), -- New multi-snapshot field
+        COALESCE(payload->'exchange_rates', '[]'::jsonb),
         COALESCE(payload->>'origin', 'pos')
     )
     RETURNING id INTO new_sale_id;
@@ -127,13 +134,67 @@ BEGIN
     -- Process Items
     FOR item IN SELECT * FROM jsonb_array_elements(payload->'items')
     LOOP
-        -- Insert Sale Item with mixed-currency metadata
+        -- Fetch product cost from DB
+        SELECT cost_price, currency INTO v_product
+        FROM public.products
+        WHERE id = (item->>'product_id')::UUID AND workspace_id = p_workspace_id;
+
+        v_cost_price := COALESCE(v_product.cost_price, 0);
+        v_original_currency := COALESCE(item->>'original_currency', v_product.currency, 'usd');
+        v_converted_cost_price := v_cost_price; -- Default: no conversion
+
+        -- Convert cost if currencies differ
+        IF v_original_currency <> v_settlement_currency THEN
+            -- Find the relevant rate from exchange_rates array
+            -- We look for a pair like 'USD/IQD', 'EUR/IQD', 'TRY/IQD' etc.
+            -- The rate stored is "per 100 units" so we divide by 100.
+            
+            -- Simplified conversion logic: use the rate that matches the original currency to settlement
+            -- For complex paths (e.g., TRY->EUR), this requires chaining, but server-side we approximate.
+            
+            -- Try to find direct rate: ORIGINAL/SETTLEMENT
+            SELECT er INTO v_rate_data FROM jsonb_array_elements(payload->'exchange_rates') er
+            WHERE (er->>'pair') = (UPPER(v_original_currency) || '/' || UPPER(v_settlement_currency));
+            
+            IF v_rate_data IS NOT NULL THEN
+                v_converted_cost_price := v_cost_price * ((v_rate_data->>'rate')::NUMERIC / 100);
+            ELSE
+                -- Try inverse: SETTLEMENT/ORIGINAL
+                SELECT er INTO v_rate_data FROM jsonb_array_elements(payload->'exchange_rates') er
+                WHERE (er->>'pair') = (UPPER(v_settlement_currency) || '/' || UPPER(v_original_currency));
+                
+                IF v_rate_data IS NOT NULL THEN
+                    v_converted_cost_price := v_cost_price / ((v_rate_data->>'rate')::NUMERIC / 100);
+                ELSE
+                    -- Fallback: Try chaining through IQD if available
+                    -- e.g., TRY -> IQD -> USD requires TRY/IQD and USD/IQD rates
+                    DECLARE
+                        v_orig_iqd_rate NUMERIC := NULL;
+                        v_settle_iqd_rate NUMERIC := NULL;
+                    BEGIN
+                        SELECT (er->>'rate')::NUMERIC INTO v_orig_iqd_rate FROM jsonb_array_elements(payload->'exchange_rates') er
+                        WHERE (er->>'pair') = (UPPER(v_original_currency) || '/IQD');
+                        
+                        SELECT (er->>'rate')::NUMERIC INTO v_settle_iqd_rate FROM jsonb_array_elements(payload->'exchange_rates') er
+                        WHERE (er->>'pair') = (UPPER(v_settlement_currency) || '/IQD');
+                        
+                        IF v_orig_iqd_rate IS NOT NULL AND v_settle_iqd_rate IS NOT NULL THEN
+                            v_converted_cost_price := (v_cost_price * (v_orig_iqd_rate / 100)) / (v_settle_iqd_rate / 100);
+                        END IF;
+                    END;
+                END IF;
+            END IF;
+        END IF;
+
+        -- Insert Sale Item with cost tracking
         INSERT INTO public.sale_items (
             sale_id, 
             product_id, 
             quantity, 
             unit_price, 
             total_price,
+            cost_price,
+            converted_cost_price,
             original_currency,
             original_unit_price,
             converted_unit_price,
@@ -145,10 +206,12 @@ BEGIN
             (item->>'quantity')::INTEGER,
             (item->>'unit_price')::NUMERIC,
             (item->>'total_price')::NUMERIC,
-            COALESCE(item->>'original_currency', 'usd'),
+            v_cost_price,
+            v_converted_cost_price,
+            v_original_currency,
             COALESCE((item->>'original_unit_price')::NUMERIC, (item->>'unit_price')::NUMERIC),
             COALESCE((item->>'converted_unit_price')::NUMERIC, (item->>'unit_price')::NUMERIC),
-            COALESCE(item->>'settlement_currency', 'usd')
+            v_settlement_currency
         );
 
         -- Update Inventory
