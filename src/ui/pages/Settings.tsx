@@ -9,8 +9,9 @@ import type { IQDDisplayPreference } from '@/local-db/models'
 import { Settings as SettingsIcon, Database, Cloud, Trash2, RefreshCw, User, Copy, Check, CreditCard, Globe } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { useTheme } from '@/ui/components/theme-provider'
-import { Moon, Sun, Monitor } from 'lucide-react'
-import { useState } from 'react'
+import { Moon, Sun, Monitor, Unlock, Server } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { getAppSettingSync, setAppSetting } from '@/local-db/settings'
 
 export function Settings() {
     const { user, signOut, isSupabaseConfigured } = useAuth()
@@ -24,6 +25,17 @@ export function Settings() {
     const [exchangeRateSource, setExchangeRateSource] = useState(localStorage.getItem('primary_exchange_rate_source') || 'xeiqd')
     const [eurExchangeRateSource, setEurExchangeRateSource] = useState(localStorage.getItem('primary_eur_exchange_rate_source') || 'forexfy')
     const [tryExchangeRateSource, setTryExchangeRateSource] = useState(localStorage.getItem('primary_try_exchange_rate_source') || 'forexfy')
+
+    // Connection Settings State
+    const [isElectron, setIsElectron] = useState(false)
+    const [isConnectionSettingsUnlocked, setIsConnectionSettingsUnlocked] = useState(false)
+    const [passkey, setPasskey] = useState('')
+    const [customUrl, setCustomUrl] = useState(getAppSettingSync('supabase_url') || '')
+    const [customKey, setCustomKey] = useState(getAppSettingSync('supabase_anon_key') || '')
+
+    useEffect(() => {
+        window.electronAPI?.isElectron().then(setIsElectron).catch(() => setIsElectron(false))
+    }, [])
 
     const handleHotkeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.slice(0, 1).toLowerCase()
@@ -71,6 +83,30 @@ export function Settings() {
     const handleClearLocalData = async () => {
         if (confirm(t('settings.messages.clearDataConfirm'))) {
             await clearDatabase()
+            window.location.reload()
+        }
+    }
+
+    const handleUnlockConnection = () => {
+        if (passkey === "Q9FZ7bM4K8xYtH6PVa5R2CJDW") {
+            setIsConnectionSettingsUnlocked(true)
+        } else {
+            alert("Invalid Passkey")
+        }
+    }
+
+    const handleSaveConnection = async () => {
+        if (confirm("Changing connection settings will reload the app. Continue?")) {
+            await setAppSetting('supabase_url', customUrl)
+            await setAppSetting('supabase_anon_key', customKey)
+            window.location.reload()
+        }
+    }
+
+    const handleResetConnection = async () => {
+        if (confirm("Reset to default system settings? This will reload the app.")) {
+            await setAppSetting('supabase_url', '')
+            await setAppSetting('supabase_anon_key', '')
             window.location.reload()
         }
     }
@@ -488,6 +524,73 @@ export function Settings() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Connection Settings (Electron Only) */}
+                    {isElectron && (
+                        <Card className="border-primary/20 bg-primary/5">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Server className="w-5 h-5 text-primary" />
+                                    Connection Settings
+                                </CardTitle>
+                                <CardDescription>
+                                    Override the default Supabase instance. Requires master passkey.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {!isConnectionSettingsUnlocked ? (
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label>Master Passkey</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    type="password"
+                                                    value={passkey}
+                                                    onChange={(e) => setPasskey(e.target.value)}
+                                                    placeholder="Enter passkey to unlock..."
+                                                    className="max-w-xs"
+                                                />
+                                                <Button onClick={handleUnlockConnection}>
+                                                    <Unlock className="w-4 h-4 mr-2" />
+                                                    Unlock
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="grid gap-4">
+                                            <div className="space-y-2">
+                                                <Label>Supabase URL</Label>
+                                                <Input
+                                                    value={customUrl}
+                                                    onChange={(e) => setCustomUrl(e.target.value)}
+                                                    placeholder="https://your-project.supabase.co"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Supabase Anon Key</Label>
+                                                <Input
+                                                    type="password"
+                                                    value={customKey}
+                                                    onChange={(e) => setCustomKey(e.target.value)}
+                                                    placeholder="your-anon-key"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 pt-2">
+                                            <Button onClick={handleSaveConnection}>
+                                                Save & Reconnect
+                                            </Button>
+                                            <Button variant="outline" onClick={handleResetConnection}>
+                                                Reset to Default
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
                 </TabsContent>
             </Tabs>
         </div>

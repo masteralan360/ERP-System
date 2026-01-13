@@ -136,7 +136,7 @@ export function Layout({ children }: LayoutProps) {
                     <div className="p-2 bg-primary/10 rounded-lg">
                         {!logoError ? (
                             <img
-                                src="/logo.png"
+                                src="./logo.png"
                                 alt="Logo"
                                 className="w-8 h-8 object-contain"
                                 onError={() => setLogoError(true)}

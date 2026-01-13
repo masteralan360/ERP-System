@@ -172,6 +172,11 @@ export interface OfflineMutation {
     error?: string
 }
 
+export interface AppSetting {
+    key: string
+    value: string
+}
+
 // Type guards
 export function isProduct(entity: BaseEntity): entity is Product {
     return 'sku' in entity && 'price' in entity && 'currency' in entity

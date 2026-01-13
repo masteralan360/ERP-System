@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, protocol, net } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const fs = require('fs')
 const { pathToFileURL } = require('url')
@@ -77,6 +78,31 @@ app.whenReady().then(() => {
     });
 
     createWindow()
+
+    // Auto-updater configuration
+    autoUpdater.checkForUpdatesAndNotify()
+
+    autoUpdater.on('update-available', () => {
+        console.log('[AutoUpdater] Update available.')
+    })
+
+    autoUpdater.on('update-downloaded', () => {
+        console.log('[AutoUpdater] Update downloaded. Will install on quit.')
+        dialog.showMessageBox({
+            type: 'info',
+            title: 'Update Ready',
+            message: 'A new version of the ERP System has been downloaded. It will be installed the next time you restart the application.',
+            buttons: ['Restart Now', 'Later']
+        }).then((result) => {
+            if (result.response === 0) {
+                autoUpdater.quitAndInstall()
+            }
+        })
+    })
+
+    autoUpdater.on('error', (err) => {
+        console.error('[AutoUpdater] Error:', err)
+    })
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

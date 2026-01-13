@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { supabase, isSupabaseConfigured } from '@/auth/supabase'
-import { useAuth } from '@/auth'
+import { useAuth } from '@/auth/AuthContext'
 import type { CurrencyCode, IQDDisplayPreference } from '@/local-db/models'
 import { db } from '@/local-db/database'
 import { addToOfflineMutations } from '@/local-db/hooks'

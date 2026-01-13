@@ -5,7 +5,7 @@ import { Package, Users, ShoppingCart, FileText, DollarSign, AlertTriangle } fro
 import { Link } from 'wouter'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
-import { useWorkspace } from '@/workspace'
+import { useWorkspace } from '@/workspace/WorkspaceContext'
 
 export function Dashboard() {
     const { user } = useAuth()

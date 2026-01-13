@@ -1,7 +1,7 @@
 {
   "name": "erp-system",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "electron/main.cjs",
   "type": "module",
   "repository": {
@@ -12,14 +12,14 @@
     "appId": "com.erpsystem.app",
     "productName": "ERP System",
     "directories": {
-      "output": "release"
+      "output": "../release"
     },
     "files": [
       "dist/**/*",
       "electron/**/*"
     ],
     "win": {
-      "target": "portable"
+      "target": "nsis"
     },
     "publish": {
       "provider": "github",
@@ -34,7 +34,8 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "npm run build && electron-builder",
+    "electron:publish": "npm run build && electron-builder --publish always"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.2",
@@ -54,6 +55,7 @@
     "clsx": "^2.1.1",
     "dexie": "^4.0.9",
     "dexie-react-hooks": "^1.1.7",
+    "electron-updater": "^6.7.3",
     "i18next": "^25.7.3",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",

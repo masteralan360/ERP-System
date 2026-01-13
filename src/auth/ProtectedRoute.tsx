@@ -1,8 +1,8 @@
 import { type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
-import { Redirect, useLocation } from 'wouter'
+import { Redirect, useLocation, Link } from 'wouter'
 import type { UserRole } from '@/local-db/models'
-import { useWorkspace } from '@/workspace'
+import { useWorkspace } from '@/workspace/WorkspaceContext'
 
 interface ProtectedRouteProps {
     children: ReactNode
@@ -35,7 +35,7 @@ export function ProtectedRoute({
     }
 
     if (!isAuthenticated) {
-        return <Redirect to={`${redirectTo}?redirect = ${encodeURIComponent(location)} `} />
+        return <Redirect to={`${redirectTo}?redirect=${encodeURIComponent(location)}`} />
     }
 
     // Redirect kicked users to workspace registration (unless this route allows kicked users)
@@ -87,7 +87,7 @@ export function ProtectedRoute({
                 <div className="text-center">
                     <h1 className="text-4xl font-bold text-amber-500 mb-4">Feature Disabled</h1>
                     <p className="text-muted-foreground mb-4">This feature is not enabled for your workspace.</p>
-                    <a href="/" className="text-primary hover:underline">Return to Dashboard</a>
+                    <Link href="/" className="text-primary hover:underline">Return to Dashboard</Link>
                 </div>
             </div>
         )

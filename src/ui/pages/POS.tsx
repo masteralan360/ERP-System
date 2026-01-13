@@ -969,7 +969,7 @@ export function POS() {
                                         title="FIB"
                                     >
                                         <img
-                                            src="/icons/FIB24x24.jpg"
+                                            src="./icons/FIB24x24.jpg"
                                             alt="FIB"
                                             className="w-6 h-6 rounded"
                                         />
@@ -985,7 +985,7 @@ export function POS() {
                                         title="QiCard"
                                     >
                                         <img
-                                            src="/icons/QIcard24x24.png"
+                                            src="./icons/QIcard24x24.png"
                                             alt="QiCard"
                                             className="w-6 h-6 rounded"
                                         />
@@ -1002,7 +1002,7 @@ export function POS() {
                                         title="ZainCash"
                                     >
                                         <img
-                                            src="/icons/zain24x24.png"
+                                            src="./icons/zain24x24.png"
                                             alt="ZainCash"
                                             className="w-6 h-6 rounded"
                                         />
@@ -1019,7 +1019,7 @@ export function POS() {
                                         title="FastPay"
                                     >
                                         <img
-                                            src="/icons/fastpay24x24.jpg"
+                                            src="./icons/fastpay24x24.jpg"
                                             alt="FastPay"
                                             className="w-6 h-6 rounded"
                                         />

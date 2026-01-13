@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { getAppSettingSync } from '@/local-db/settings'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const supabaseUrl = getAppSettingSync('supabase_url') || import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseAnonKey = getAppSettingSync('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 // Check if Supabase is configured
 // Check if Supabase is configured with valid values
