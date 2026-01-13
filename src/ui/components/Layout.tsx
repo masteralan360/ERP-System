@@ -123,7 +123,8 @@ export function Layout({ children }: LayoutProps) {
             {/* Sidebar */}
             <aside
                 className={cn(
-                    'fixed inset-y-0 z-50 w-64 bg-card transform transition-transform duration-300 ease-in-out',
+                    'fixed inset-y-0 z-50 w-64 transform transition-transform duration-300 ease-in-out',
+                    'glass sidebar-gradient shadow-2xl',
                     // Desktop state
                     desktopSidebarOpen ? 'lg:translate-x-0 lg:rtl:translate-x-0' : 'lg:-translate-x-full lg:rtl:translate-x-full',
                     // Positioning
@@ -135,7 +136,7 @@ export function Layout({ children }: LayoutProps) {
             >
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
-                    <div className="p-2 bg-primary/10 rounded-lg">
+                    <div className="p-2 bg-primary/10 rounded-xl">
                         {!logoError ? (
                             <img
                                 src="./logo.png"
@@ -172,10 +173,10 @@ export function Layout({ children }: LayoutProps) {
                             >
                                 <span
                                     className={cn(
-                                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300',
                                         isActive
-                                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                                            : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-[1.02]'
+                                            : 'text-muted-foreground hover:bg-primary/5 hover:text-primary'
                                     )}
                                 >
                                     <item.icon className="w-5 h-5" />
@@ -261,7 +262,7 @@ export function Layout({ children }: LayoutProps) {
             )}>
                 {/* Top bar */}
                 {/* Top bar */}
-                <header className="sticky top-0 z-30 flex items-center gap-4 px-4 py-3 bg-background/80 backdrop-blur-lg border-b border-border">
+                <header className="sticky top-0 z-30 flex items-center gap-4 px-4 py-3 bg-background/60 backdrop-blur-xl border-b border-border/50">
                     {/* Mobile Toggle */}
                     <button
                         className="lg:hidden p-2 -ms-2 rounded-lg hover:bg-secondary"
@@ -296,7 +297,7 @@ export function Layout({ children }: LayoutProps) {
                 </header>
 
                 {/* Page content */}
-                <main className="p-4 lg:p-6">
+                <main className="p-4 lg:p-6 page-enter">
                     <Suspense fallback={<PageLoading />}>
                         {children}
                     </Suspense>

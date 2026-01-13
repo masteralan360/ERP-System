@@ -16,7 +16,7 @@ import { getAppSettingSync, setAppSetting } from '@/local-db/settings'
 export function Settings() {
     const { user, signOut, isSupabaseConfigured } = useAuth()
     const { syncState, pendingCount, lastSyncTime, sync, isSyncing, isOnline } = useSyncStatus()
-    const { theme, setTheme } = useTheme()
+    const { theme, setTheme, style, setStyle } = useTheme()
     const { features, updateSettings } = useWorkspace()
     const { t } = useTranslation()
     const [copied, setCopied] = useState(false)
@@ -166,6 +166,26 @@ export function Settings() {
                                         >
                                             <Monitor className="w-4 h-4" />
                                             {t('settings.theme.system')}
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border/50">
+                                    <Label>{t('settings.theme.style')}</Label>
+                                    <div className="grid grid-cols-2 gap-2 max-w-md">
+                                        <Button
+                                            variant={style === 'modern' ? 'default' : 'outline'}
+                                            className="flex items-center gap-2 justify-center"
+                                            onClick={() => setStyle('modern')}
+                                        >
+                                            {t('settings.theme.modern')}
+                                        </Button>
+                                        <Button
+                                            variant={style === 'legacy' ? 'default' : 'outline'}
+                                            className="flex items-center gap-2 justify-center"
+                                            onClick={() => setStyle('legacy')}
+                                        >
+                                            {t('settings.theme.legacy')}
                                         </Button>
                                     </div>
                                 </div>
@@ -579,7 +599,7 @@ export function Settings() {
                         </Card>
                     )}
                 </TabsContent>
-            </Tabs>
-        </div>
+            </Tabs >
+        </div >
     )
 }

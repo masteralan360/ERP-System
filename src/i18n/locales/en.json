@@ -276,7 +276,10 @@
         "language": "Language",
         "languageDesc": "Select your preferred language",
         "theme": {
-            "title": "Theme",
+            "title": "Theme Preference",
+            "style": "Theme Style",
+            "modern": "Modern (Premium)",
+            "legacy": "Legacy (Classic)",
             "light": "Light",
             "dark": "Dark",
             "system": "System"

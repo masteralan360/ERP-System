@@ -8,7 +8,8 @@ import './i18n/config'
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme" defaultStyle="modern">
+            {/* To set Legacy as default, use: defaultStyle="legacy" */}
             <App />
         </ThemeProvider>
     </StrictMode>,
