@@ -45,6 +45,8 @@ export interface Product extends BaseEntity {
     currency: CurrencyCode
     barcode?: string
     imageUrl?: string
+    canBeReturned: boolean
+    returnRules?: string
 }
 
 export interface Category extends BaseEntity {

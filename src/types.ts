@@ -14,6 +14,17 @@ export interface SaleItem {
     converted_unit_price: number
     settlement_currency: string
     negotiated_price?: number
+    returned_quantity?: number
+    is_returned?: boolean
+    return_reason?: string
+    returned_at?: string
+    returned_by?: string
+    product?: {
+        name: string
+        sku: string
+        can_be_returned: boolean
+        return_rules?: string
+    }
 }
 
 export interface Sale {
@@ -31,6 +42,10 @@ export interface Sale {
     payment_method?: 'cash' | 'fib' | 'qicard' | 'zaincash' | 'fastpay'
     cashier_name?: string
     items?: SaleItem[]
+    is_returned?: boolean
+    return_reason?: string
+    returned_at?: string
+    returned_by?: string
 }
 
 export interface CartItem {

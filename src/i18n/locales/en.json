@@ -29,6 +29,10 @@
         "added": "Added",
         "to": "to",
         "offline": "Offline",
+        "continue": "Continue",
+        "back": "Back",
+        "done": "Done",
+        "next": "Next",
         "messages": {
             "deleteConfirm": "Are you sure you want to delete this item?",
             "deleteSuccess": "Item deleted successfully",
@@ -87,7 +91,15 @@
             "upload": "Upload",
             "electronOnly": "Local upload is only available in Desktop App",
             "localPathDesc": "Image will be stored locally on this machine.",
-            "webUrlDesc": "Enter a public image URL or use Desktop App for local upload."
+            "webUrlDesc": "Enter a public image URL or use Desktop App for local upload.",
+            "canBeReturned": "Can be Returned",
+            "canBeReturnedDesc": "Customers can return this product.",
+            "cannotBeReturnedDesc": "This product is non-returnable.",
+            "addRules": "Add rules",
+            "returnRulesTitle": "Return Rules",
+            "rulesLabel": "Specify return conditions",
+            "rulesPlaceholder": "e.g. Must be in original packaging, Only within 7 days...",
+            "rulesHint": "These rules will be shown to staff during the return process."
         },
         "messages": {
             "addSuccess": "Product added successfully",
@@ -448,33 +460,37 @@
         "details": "Sale Details",
         "id": "Sale ID",
         "paymentMethod": "Payment Method",
-        "receipt": {
-            "thankYou": "Thank you for shopping with us!",
-            "keepRecord": "Please keep this receipt for your records."
+        "filters": {
+            "cashier": "Cashier",
+            "allCashiers": "All Cashiers"
+        },
+        "return": {
+            "returnedMessage": "This sale has been returned",
+            "confirmMessage": "Are you sure you want to return this sale?",
+            "confirmTitle": "Confirm Return",
+            "confirmReturn": "Confirm Return",
+            "selectReason": "Select a reason for return:",
+            "reasonPlaceholder": "Enter a reason for return (50 characters max)",
+            "selectQuantity": "How many \"{{item}}\" would you like to return?",
+            "maxQuantity": "Maximum quantity: {{max}}",
+            "specifyReason": "Please specify reason:",
+            "declineTitle": "Return Not Possible",
+            "declineMessage": "The following products in this sale are marked as non-returnable:",
+            "declineNote": "Please contact an administrator if you believe this is an error.",
+            "moreRulesFollowing": "More rules follow for other items",
+            "reasons": {
+                "customerReturned": "Customer returned item",
+                "wrongItem": "Wrong item sold",
+                "pricingMistake": "Pricing mistake",
+                "damagedProduct": "Damaged product",
+                "duplicateSale": "Duplicate sale",
+                "other": "Other"
+            }
         }
     },
-    "messages": {
-        "success": "Success",
-        "error": "Error",
-        "saleCompleted": "Sale completed successfully!",
-        "checkoutFailed": "Checkout failed"
-    },
-    "workspaceConfig": {
-        "title": "Configure Your Workspace",
-        "subtitle": "Select which features to enable for your workspace. You can change these settings later.",
-        "workspaceName": "Workspace",
-        "continue": "Continue to Dashboard",
-        "note": "Only The Admin can modify these settings.",
-        "features": {
-            "pos": "Point of Sale (POS)",
-            "posDesc": "Enable quick sales and checkout functionality",
-            "customers": "Customer Management",
-            "customersDesc": "Track and manage customer information",
-            "orders": "Order Management",
-            "ordersDesc": "Create and track customer orders",
-            "invoices": "Invoicing",
-            "invoicesDesc": "Generate and manage invoices"
-        }
+    "receipt": {
+        "thankYou": "Thank you for shopping with us!",
+        "keepRecord": "Please keep this receipt for your records."
     },
     "categories": {
         "title": "Categories",

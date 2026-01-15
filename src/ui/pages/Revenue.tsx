@@ -101,6 +101,9 @@ export function Revenue() {
         const saleStats: any[] = []
 
         sales.forEach(sale => {
+            // Skip returned sales from revenue calculations
+            if (sale.is_returned) return
+            
             const currency = sale.settlement_currency || 'usd'
             if (!statsByCurrency[currency]) {
                 statsByCurrency[currency] = { revenue: 0, cost: 0, salesCount: 0 }
@@ -111,6 +114,9 @@ export function Revenue() {
             let saleCost = 0
 
             sale.items?.forEach((item: SaleItem) => {
+                // Skip returned items from calculations
+                if (item.is_returned) return
+                
                 // Use the values already converted to settlement currency or the original ones if same
                 const itemRevenue = item.converted_unit_price * item.quantity
                 const itemCost = (item.converted_cost_price || 0) * item.quantity

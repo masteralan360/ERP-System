@@ -25,7 +25,11 @@
         "signOut": "الخروح من الحساب",
         "offline": "غير متصل",
         "snapshots": "في وقت البيع",
-        "to": "إلى"
+        "to": "إلى",
+        "continue": "متابعة",
+        "back": "رجوع",
+        "done": "تم",
+        "next": "التالي"
     },
     "nav": {
         "dashboard": "لوحة التحكم",
@@ -75,7 +79,15 @@
             "upload": "رفع",
             "electronOnly": "الرفع المحلي متاح فقط في تطبيق سطح المكتب",
             "localPathDesc": "سيتم تخزين الصورة محلياً على هذا الجهاز.",
-            "webUrlDesc": "أدخل رابط صورة عام أو استخدم تطبيق سطح المكتب للرفع المحلي."
+            "webUrlDesc": "أدخل رابط صورة عام أو استخدم تطبيق سطح المكتب للرفع المحلي.",
+            "canBeReturned": "يمكن إرجاعه",
+            "canBeReturnedDesc": "يمكن للعملاء إرجاع هذا المنتج.",
+            "cannotBeReturnedDesc": "هذا المنتج غير قابل للإرجاع.",
+            "addRules": "إضافة قواعد",
+            "returnRulesTitle": "قواعد الإرجاع",
+            "rulesLabel": "حدد شروط الإرجاع",
+            "rulesPlaceholder": "مثال: يجب أن يكون في العبوة الأصلية، خلال 7 أيام فقط...",
+            "rulesHint": "سيتم عرض هذه القواعد للموظفين أثناء عملية الإرجاع."
         },
         "messages": {
             "addSuccess": "تم إضافة المنتج بنجاح",
@@ -432,16 +444,37 @@
         "total": "المجموع",
         "details": "تفاصيل البيع",
         "id": "رقم البيع",
+        "paymentMethod": "طريقة الدفع",
+        "filters": {
+            "cashier": "الكاشير",
+            "allCashiers": "جميع الكاشير"
+        },
+        "return": {
+            "confirmTitle": "تأكيد الإرجاع",
+            "confirmMessage": "هل أنت متأكد من أنك تريد إرجاع هذا البيع؟",
+            "confirmReturn": "تأكيد الإرجاع",
+            "selectReason": "اختر سبب الإرجاع",
+            "reasonPlaceholder": "أدخل سبب الإرجاع (50 حرف كحد أقصى)",
+            "selectQuantity": "كم عدد \"{{item}}\" الذي تريد إرجاعه؟",
+            "maxQuantity": "الحد الأقصى للكمية: {{max}}",
+            "specifyReason": "يرجى تحديد السبب:",
+            "declineTitle": "الإرجاع غير ممكن",
+            "declineMessage": "المنتجات التالية في هذا البيع مصنفة على أنها غير قابلة للإرجاع:",
+            "declineNote": "يرجى الاتصال بالمسؤول إذا كنت تعتقد أن هذا خطأ.",
+            "moreRulesFollowing": "توجد قواعد إضافية للعناصر الأخرى",
+            "reasons": {
+                "customerReturned": "العميل أرجع المنتج",
+                "wrongItem": "تم بيع منتج خاطئ",
+                "pricingMistake": "خطأ في السعر",
+                "damagedProduct": "منتج تالف",
+                "duplicateSale": "بيع مكرر",
+                "other": "سبب آخر"
+            }
+        },
         "receipt": {
             "thankYou": "شكراً لتسوقكم معنا!",
             "keepRecord": "يرجى الاحتفاظ بهذا الإيصال لسجلاتك."
-        }
-    },
-    "messages": {
-        "success": "ناجح",
-        "error": "خطأ",
-        "saleCompleted": "تم إكمال البيع بنجاح!",
-        "checkout": "الدفع",
+        },
         "offlineTitle": "تم الحفظ بدون اتصال",
         "offlineDesc": "تم حفظ عملية البيع محلياً وستتم مزامنتها عند الاتصال بالإنترنت."
     },

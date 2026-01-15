@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useProducts, createProduct, updateProduct, deleteProduct, useCategories, createCategory, updateCategory, deleteCategory, type Product, type Category } from '@/local-db'
 import type { CurrencyCode } from '@/local-db/models'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import {
     Table,
     TableBody,
@@ -27,9 +27,10 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-    CurrencySelector
+    CurrencySelector,
+    Switch
 } from '@/ui/components'
-import { Plus, Pencil, Trash2, Package, Search, ImagePlus, Info } from 'lucide-react'
+import { Plus, Pencil, Trash2, Package, Search, ImagePlus, Info, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
 import { useWorkspace } from '@/workspace'
@@ -49,6 +50,8 @@ type ProductFormData = {
     unit: string
     currency: CurrencyCode
     imageUrl: string
+    canBeReturned: boolean
+    returnRules: string
 }
 
 const initialFormData: ProductFormData = {
@@ -62,7 +65,9 @@ const initialFormData: ProductFormData = {
     minStockLevel: 10,
     unit: 'pcs',
     currency: 'usd',
-    imageUrl: ''
+    imageUrl: '',
+    canBeReturned: true,
+    returnRules: ''
 }
 
 export function Products() {
@@ -83,6 +88,7 @@ export function Products() {
     const [categoryFormData, setCategoryFormData] = useState({ name: '', description: '' })
     const [isLoading, setIsLoading] = useState(false)
     const [isElectron, setIsElectron] = useState(false)
+    const [returnRulesModalOpen, setReturnRulesModalOpen] = useState(false)
 
     useEffect(() => {
         window.electronAPI?.isElectron().then(setIsElectron).catch(() => setIsElectron(false));
@@ -136,7 +142,9 @@ export function Products() {
                 minStockLevel: product.minStockLevel,
                 unit: product.unit,
                 currency: product.currency,
-                imageUrl: product.imageUrl || ''
+                imageUrl: product.imageUrl || '',
+                canBeReturned: product.canBeReturned ?? true,
+                returnRules: product.returnRules || ''
             })
         } else {
             setEditingProduct(null)
@@ -461,6 +469,40 @@ export function Products() {
                             </div>
                         </div>
 
+                        <div className="pt-2">
+                            <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/30 transition-colors duration-200">
+                                <div className="space-y-1 text-start">
+                                    <Label htmlFor="canBeReturned" className="text-base font-bold cursor-pointer">
+                                        {t('products.form.canBeReturned') || 'Can be Returned'}
+                                    </Label>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        {formData.canBeReturned
+                                            ? (t('products.form.canBeReturnedDesc') || 'Customers can return this product.')
+                                            : (t('products.form.cannotBeReturnedDesc') || 'This product is non-returnable.')}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-4 ml-4 rtl:ml-0 rtl:mr-4">
+                                    {formData.canBeReturned && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setReturnRulesModalOpen(true)}
+                                            className="h-9 px-4 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all animate-in fade-in zoom-in duration-200"
+                                        >
+                                            <Settings className="w-4 h-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                                            {t('products.form.addRules') || 'Add rules'}
+                                        </Button>
+                                    )}
+                                    <Switch
+                                        id="canBeReturned"
+                                        checked={formData.canBeReturned}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, canBeReturned: checked })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="space-y-4 pt-4 border-t">
                             <Label className="flex items-center gap-2">
                                 {t('products.form.image') || 'Product Image'}
@@ -538,6 +580,7 @@ export function Products() {
             </Dialog>
             {/* Category Dialog */}
             <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+                {/* ... existing Category Dialog content ... */}
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>{editingCategory ? t('categories.editCategory') : t('categories.addCategory')}</DialogTitle>
@@ -597,6 +640,48 @@ export function Products() {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Return Rules Modal */}
+            <Dialog open={returnRulesModalOpen} onOpenChange={setReturnRulesModalOpen}>
+                <DialogContent className="max-w-md animate-in fade-in zoom-in duration-300">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Settings className="w-5 h-5 text-primary" />
+                            {t('products.form.returnRulesTitle') || 'Return Rules'}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="returnRules">{t('products.form.rulesLabel') || 'Specify return conditions'}</Label>
+                                <span className={cn(
+                                    "text-[10px] font-mono",
+                                    formData.returnRules.length >= 225 ? "text-destructive font-bold" : "text-muted-foreground"
+                                )}>
+                                    {formData.returnRules.length}/250
+                                </span>
+                            </div>
+                            <Textarea
+                                id="returnRules"
+                                value={formData.returnRules}
+                                onChange={(e) => setFormData({ ...formData, returnRules: e.target.value.slice(0, 250) })}
+                                placeholder={t('products.form.rulesPlaceholder') || "e.g. Must be in original packaging, Only within 7 days..."}
+                                rows={6}
+                                maxLength={250}
+                                className="resize-none"
+                            />
+                        </div>
+                        <p className="text-xs text-muted-foreground italic">
+                            {t('products.form.rulesHint') || 'These rules will be shown to staff during the return process.'}
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" onClick={() => setReturnRulesModalOpen(false)}>
+                            {t('common.done') || 'Done'}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

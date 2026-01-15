@@ -181,6 +181,9 @@ export function TeamPerformance() {
         })
 
         sales.forEach(sale => {
+            // Skip returned sales from performance calculations
+            if (sale.is_returned) return
+            
             const cashierId = sale.cashier_id
             if (!perfMap[cashierId]) return
 
