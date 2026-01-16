@@ -44,9 +44,18 @@ export function Settings() {
     const activeSupabaseKey = customKey || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
     /* --- Connection Settings (Web) State End --- */
 
+    const [version, setVersion] = useState('')
+
     useEffect(() => {
         // @ts-ignore
-        setIsElectron(!!window.__TAURI_INTERNALS__)
+        const isTauri = !!window.__TAURI_INTERNALS__
+        setIsElectron(isTauri)
+
+        if (isTauri) {
+            import('@tauri-apps/api/app').then(({ getVersion }) => {
+                getVersion().then(setVersion).catch(console.error)
+            })
+        }
     }, [])
 
     const [updateStatus, setUpdateStatus] = useState<any>(null)
@@ -195,8 +204,8 @@ export function Settings() {
 
             <Tabs defaultValue="general" className="w-full space-y-6">
                 <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-                    <TabsTrigger value="general">{t('settings.tabs.general') || 'General Settings'}</TabsTrigger>
-                    <TabsTrigger value="advanced">{t('settings.tabs.advanced') || 'Advanced Settings'}</TabsTrigger>
+                    <TabsTrigger value="general">{t('settings.tabs.general') || 'General'}</TabsTrigger>
+                    <TabsTrigger value="advanced">{t('settings.tabs.advanced') || 'Advanced'}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-6 mt-0">
@@ -287,7 +296,7 @@ export function Settings() {
                             <CardContent className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <p className="font-medium">Update Status</p>
+                                        <p className="font-medium">Update Status <span className="text-xs font-normal text-muted-foreground font-mono ml-2">(v{version})</span></p>
                                         <p className="text-sm text-muted-foreground">
                                             {updateStatus?.status === 'checking' && 'Checking for updates...'}
                                             {updateStatus?.status === 'available' && 'Update available! Downloading...'}
@@ -814,6 +823,9 @@ export function Settings() {
                         </>
                     )}
                 </TabsContent>
+
+
+
             </Tabs >
         </div >
     )

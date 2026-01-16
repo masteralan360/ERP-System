@@ -51,6 +51,7 @@ export function Layout({ children }: LayoutProps) {
     const { t } = useTranslation()
     const [logoError, setLogoError] = useState(false)
     const [copied, setCopied] = useState(false)
+    const [version, setVersion] = useState('')
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text)
@@ -73,6 +74,14 @@ export function Layout({ children }: LayoutProps) {
         }
 
         fetchMembers()
+
+        // Fetch App Version
+        // @ts-ignore
+        if (window.__TAURI_INTERNALS__) {
+            import('@tauri-apps/api/app').then(({ getVersion }) => {
+                getVersion().then(setVersion).catch(console.error)
+            })
+        }
     }, [user?.workspaceId])
 
     const navigation = [
@@ -236,7 +245,7 @@ export function Layout({ children }: LayoutProps) {
                     </div>
                 </div>
 
-                {/* User info */}
+                {/* User info & Version */}
                 <div className="p-4 border-t border-border">
                     <div className="flex items-center gap-3 px-3 py-2">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-sm font-bold text-white">
@@ -254,6 +263,12 @@ export function Layout({ children }: LayoutProps) {
                         >
                             <LogOut className="w-4 h-4" />
                         </Button>
+                    </div>
+                    {/* Version Display */}
+                    <div className="mt-2 text-center">
+                        <p className="text-[10px] text-muted-foreground font-mono opacity-50">
+                            v{version}
+                        </p>
                     </div>
                 </div>
             </aside>

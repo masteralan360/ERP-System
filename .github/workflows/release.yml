@@ -48,8 +48,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "IraqCore ${{ github.ref_name }}"
+          # Ensure latest.json is generated
+          includeUpdaterJson: true
+          # Simplify release body
           releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
-          prerelease: false
-          # Auto-generates latest.json and uploads to release
-          updaterJsonKeepUniversal: true
