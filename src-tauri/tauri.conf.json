@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "IraqCore",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "identifier": "com.iraqcore.app",
   "build": {
     "frontendDist": "../dist",
@@ -49,6 +49,9 @@
       "endpoints": [
         "https://github.com/masteralan360/ERP-System/releases/latest/download/latest.json"
       ],
+      "windows": {
+        "installMode": "passive"
+      },
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg2OUREMEUyOEM3MTczMDMKUldRRGMzR000dENkaHBNM3RlKzVhaUlpSTdUamxLdE0vNGpQODMrN1pWUzFlZEpydlVCV3FLOWEK"
     }
   }
