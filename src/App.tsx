@@ -81,7 +81,6 @@ function App() {
             const checkForUpdates = async () => {
                 try {
                     const { check } = await import('@tauri-apps/plugin-updater')
-                    const { relaunch } = await import('@tauri-apps/plugin-process')
 
                     console.log('[Tauri] Checking for updates...')
                     const update = await check()
