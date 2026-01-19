@@ -5,6 +5,8 @@ import { useAuth } from '@/auth'
 import { useWorkspace } from '@/workspace'
 import { SyncStatusIndicator } from './SyncStatusIndicator'
 import { ExchangeRateIndicator } from './ExchangeRateIndicator'
+import { GlobalSearch } from './GlobalSearch'
+
 import {
     LayoutDashboard,
     Package,
@@ -39,7 +41,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
     const [location] = useLocation()
     const { user, signOut } = useAuth()
-    const { hasFeature, workspaceName } = useWorkspace()
+    const { hasFeature, workspaceName, isFullscreen } = useWorkspace()
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
     const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -311,7 +313,11 @@ export function Layout({ children }: LayoutProps) {
                         )}
                     </button>
 
-                    <div className="flex-1" />
+                    <div className="flex-1 flex justify-center px-4">
+                        {(!isTauri || isFullscreen) && (
+                            <GlobalSearch className="max-w-[500px] animate-in fade-in slide-in-from-top-2 duration-300" />
+                        )}
+                    </div>
 
                     <div className="flex items-center gap-3">
                         <ExchangeRateIndicator />

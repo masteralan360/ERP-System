@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { Minus, Square, X, Search, Sun, Moon, ArrowUpCircle } from 'lucide-react'
+import { Minus, Square, X, Sun, Moon, ArrowUpCircle } from 'lucide-react'
 import { useWorkspace } from '@/workspace/WorkspaceContext'
 import { useTheme } from '@/ui/components/theme-provider'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { GlobalSearch } from './GlobalSearch'
+
 
 export function TitleBar() {
     const [isMaximized, setIsMaximized] = useState(false)
-    const [isFullscreen, setIsFullscreen] = useState(false)
-    const { workspaceName, pendingUpdate } = useWorkspace()
+    const { workspaceName, pendingUpdate, isFullscreen } = useWorkspace()
     const { theme, setTheme } = useTheme()
     const { t } = useTranslation()
     // @ts-ignore
@@ -23,16 +24,7 @@ export function TitleBar() {
             try {
                 const window = getCurrentWindow()
                 const maximized = await window.isMaximized()
-                const fullscreen = await window.isFullscreen()
-
                 setIsMaximized(maximized)
-                setIsFullscreen(fullscreen)
-
-                if (fullscreen) {
-                    document.documentElement.setAttribute('data-fullscreen', 'true')
-                } else {
-                    document.documentElement.removeAttribute('data-fullscreen')
-                }
             } catch (e) {
                 console.error(e)
             }
@@ -101,22 +93,7 @@ export function TitleBar() {
 
             {/* Center: Search Box */}
             <div data-tauri-drag-region className="flex-1 flex justify-center max-w-md">
-                <div className="relative w-full max-w-[400px] group">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                    <input
-                        type="text"
-                        className={cn(
-                            "flex h-9 w-full rounded-md border border-input bg-secondary/50 px-3 py-1 text-sm shadow-sm transition-colors",
-                            "file:border-0 file:bg-transparent file:text-sm file:font-medium",
-                            "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-                            "pl-9 text-center focus:text-left focus:bg-background/80" // Starts centered-ish placeholder, moves left on focus? Or just standard left.
-                        )}
-                        placeholder="Search..."
-                        spellCheck={false}
-                    />
-                </div>
+                <GlobalSearch className="max-w-[400px]" />
             </div>
 
             {/* Right: Window Controls */}

@@ -30,6 +30,7 @@ interface WorkspaceContextType {
     isLoading: boolean
     pendingUpdate: UpdateInfo | null
     setPendingUpdate: (update: UpdateInfo | null) => void
+    isFullscreen: boolean
     hasFeature: (feature: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices') => boolean
     refreshFeatures: () => Promise<void>
     updateSettings: (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled' | 'try_conversion_enabled'>>) => Promise<void>
@@ -56,6 +57,42 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const [workspaceName, setWorkspaceName] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null)
+    const [isFullscreen, setIsFullscreen] = useState(false)
+
+    // Tauri-only: Track Fullscreen State
+    useEffect(() => {
+        // @ts-ignore
+        const isTauri = !!window.__TAURI_INTERNALS__
+        if (!isTauri) return
+
+        const updateFSState = async () => {
+            try {
+                const { getCurrentWindow } = await import('@tauri-apps/api/window')
+                const win = getCurrentWindow()
+                const fs = await win.isFullscreen()
+                setIsFullscreen(fs)
+
+                if (fs) {
+                    document.documentElement.setAttribute('data-fullscreen', 'true')
+                } else {
+                    document.documentElement.removeAttribute('data-fullscreen')
+                }
+            } catch (e) {
+                console.error('[Tauri] FS Update Error:', e)
+            }
+        }
+
+        updateFSState()
+
+        let unlisten: () => void
+        const setup = async () => {
+            const { getCurrentWindow } = await import('@tauri-apps/api/window')
+            unlisten = await getCurrentWindow().onResized(updateFSState)
+        }
+        setup()
+
+        return () => unlisten?.()
+    }, [])
 
     const fetchFeatures = async () => {
         if (!isSupabaseConfigured || !isAuthenticated || !user?.workspaceId) {
@@ -207,6 +244,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             isLoading,
             pendingUpdate,
             setPendingUpdate,
+            isFullscreen,
             hasFeature,
             refreshFeatures,
             updateSettings

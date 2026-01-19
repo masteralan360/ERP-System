@@ -50,3 +50,5 @@ export { ReturnConfirmationModal } from './ReturnConfirmationModal'
 export { ReturnDeclineModal } from './ReturnDeclineModal'
 export { ReturnRulesDisplayModal } from './ReturnRulesDisplayModal'
 export { SaleDetailsModal } from './SaleDetailsModal'
+export { GlobalSearch } from './GlobalSearch'
+
