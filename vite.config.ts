@@ -7,7 +7,8 @@ export default defineConfig({
     base: './',
     plugins: [
         react(),
-        VitePWA({
+        // Disable PWA in Tauri/Electron environment to prevent stale UI caching
+        !process.env.TAURI_ENV_PLATFORM && VitePWA({
             registerType: 'autoUpdate',
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
             manifest: {

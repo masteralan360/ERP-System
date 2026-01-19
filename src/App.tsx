@@ -133,7 +133,10 @@ function UpdateHandler() {
 
     useEffect(() => {
         if (isElectron) {
-            checkForUpdates()
+            // Delay startup check slightly to ensure network and WebView are fully ready
+            const timer = setTimeout(() => {
+                checkForUpdates()
+            }, 3000)
 
             const handleManualCheck = () => {
                 checkForUpdates(true)
@@ -161,6 +164,7 @@ function UpdateHandler() {
 
             window.addEventListener('keydown', handleKeyDown)
             return () => {
+                clearTimeout(timer)
                 window.removeEventListener('keydown', handleKeyDown)
                 window.removeEventListener('check-for-updates', handleManualCheck)
             }
@@ -174,17 +178,6 @@ function UpdateHandler() {
 
 
 function App() {
-    // Hard Guard for Electron Connection Configuration
-    // If we are in Electron and Supabase is not configured, we catch it here
-    // effectively preventing the rest of the app (AuthProvider, etc.) from loading.
-    if (isElectron && !isSupabaseConfigured) {
-        return (
-            <Suspense fallback={<LoadingState />}>
-                <ConnectionConfiguration />
-            </Suspense>
-        )
-    }
-
     useEffect(() => {
         if (isElectron) {
             console.log('[Tauri] Pre-loading all pages for snappy navigation...')
@@ -192,17 +185,16 @@ function App() {
         }
     }, [])
 
-
-
-
-
-
     return (
-        <>
-            <AuthProvider>
-                <WorkspaceProvider>
-                    <UpdateHandler />
-                    <TitleBar />
+        <AuthProvider>
+            <WorkspaceProvider>
+                <UpdateHandler />
+                <TitleBar />
+                {isElectron && !isSupabaseConfigured ? (
+                    <Suspense fallback={<LoadingState />}>
+                        <ConnectionConfiguration />
+                    </Suspense>
+                ) : (
                     <ExchangeRateProvider>
                         <Suspense fallback={<LoadingState />}>
                             <Router hook={useHashLocation}>
@@ -343,10 +335,10 @@ function App() {
                             </Router>
                         </Suspense>
                     </ExchangeRateProvider>
-                </WorkspaceProvider>
+                )}
                 <Toaster />
-            </AuthProvider >
-        </>
+            </WorkspaceProvider>
+        </AuthProvider>
     )
 }
 

@@ -10,6 +10,36 @@ import './i18n/config'
 // @ts-ignore
 if (window.__TAURI_INTERNALS__) {
     document.addEventListener('contextmenu', (e) => e.preventDefault())
+
+    // Targeted Cache Cleanup: Eliminates "Stale UI" without touching database/config
+    const cleanupCache = async () => {
+        try {
+            // 1. Unregister all service workers (PWA residues)
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations()
+                for (const registration of registrations) {
+                    await registration.unregister()
+                    console.log('[Tauri] Unregistered service worker:', registration.scope)
+                }
+            }
+
+            // 2. Clear named caches (Asset caches for UI)
+            if ('caches' in window) {
+                const keys = await caches.keys()
+                for (const key of keys) {
+                    await caches.delete(key)
+                    console.log('[Tauri] Deleted asset cache:', key)
+                }
+            }
+
+            // NOTE: LocalStorage and IndexedDB (Supabase config & ERP data) are NOT touched.
+        } catch (error) {
+            console.error('[Tauri] Cache cleanup failed:', error)
+        }
+    }
+
+    // Run cleanup on startup to ensure fresh assets
+    cleanupCache()
 }
 
 createRoot(document.getElementById('root')!).render(
