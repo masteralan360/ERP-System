@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { Minus, Square, X, Search } from 'lucide-react'
-import { useWorkspace } from '@/workspace'
+import { Minus, Square, X, Search, Sun, Moon, ArrowUpCircle } from 'lucide-react'
+import { useWorkspace } from '@/workspace/WorkspaceContext'
+import { useTheme } from '@/ui/components/theme-provider'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 export function TitleBar() {
     const [isMaximized, setIsMaximized] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
-    const { workspaceName } = useWorkspace()
+    const { workspaceName, pendingUpdate } = useWorkspace()
+    const { theme, setTheme } = useTheme()
+    const { t } = useTranslation()
     // @ts-ignore
     const isTauri = !!window.__TAURI_INTERNALS__
 
@@ -117,6 +121,32 @@ export function TitleBar() {
 
             {/* Right: Window Controls */}
             <div data-tauri-drag-region className="flex items-center justify-end gap-1 w-1/3">
+                {pendingUpdate && (
+                    <button
+                        onClick={() => {
+                            // Logic to trigger update dialog - we can just let App.tsx handle it 
+                            // or better, we can expose the check function.
+                            // For now, let's assume we want to re-run the check.
+                            window.dispatchEvent(new CustomEvent('check-for-updates'))
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 mr-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-all border border-blue-500/20 group"
+                        title={t('updater.available')}
+                    >
+                        <ArrowUpCircle className="w-3.5 h-3.5 group-hover:animate-bounce" />
+                        <span className="text-xs font-medium">{t('updater.available')}</span>
+                    </button>
+                )}
+                <button
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    className="p-2 hover:bg-secondary rounded-md transition-colors text-muted-foreground hover:text-foreground mr-1"
+                    title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                >
+                    {theme === 'dark' ? (
+                        <Sun className="w-4 h-4" />
+                    ) : (
+                        <Moon className="w-4 h-4" />
+                    )}
+                </button>
                 <button
                     onClick={minimize}
                     className="p-2 hover:bg-secondary rounded-md transition-colors text-muted-foreground hover:text-foreground"

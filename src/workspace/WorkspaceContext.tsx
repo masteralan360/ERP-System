@@ -18,10 +18,18 @@ export interface WorkspaceFeatures {
     locked_workspace: boolean
 }
 
+export interface UpdateInfo {
+    version: string
+    date?: string
+    body?: string
+}
+
 interface WorkspaceContextType {
     features: WorkspaceFeatures
     workspaceName: string | null
     isLoading: boolean
+    pendingUpdate: UpdateInfo | null
+    setPendingUpdate: (update: UpdateInfo | null) => void
     hasFeature: (feature: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices') => boolean
     refreshFeatures: () => Promise<void>
     updateSettings: (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled' | 'try_conversion_enabled'>>) => Promise<void>
@@ -47,6 +55,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const [features, setFeatures] = useState<WorkspaceFeatures>(defaultFeatures)
     const [workspaceName, setWorkspaceName] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
+    const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null)
 
     const fetchFeatures = async () => {
         if (!isSupabaseConfigured || !isAuthenticated || !user?.workspaceId) {
@@ -192,7 +201,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <WorkspaceContext.Provider value={{ features, workspaceName, isLoading, hasFeature, refreshFeatures, updateSettings }}>
+        <WorkspaceContext.Provider value={{
+            features,
+            workspaceName,
+            isLoading,
+            pendingUpdate,
+            setPendingUpdate,
+            hasFeature,
+            refreshFeatures,
+            updateSettings
+        }}>
             {children}
         </WorkspaceContext.Provider>
     )

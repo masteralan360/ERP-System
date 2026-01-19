@@ -3,7 +3,11 @@ import { useHashLocation } from '@/hooks/useHashLocation'
 import { AuthProvider, ProtectedRoute, GuestRoute } from '@/auth'
 import { WorkspaceProvider } from '@/workspace'
 import { Layout, Toaster, TitleBar } from '@/ui/components'
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useWorkspace } from '@/workspace'
+import { ExchangeRateProvider } from '@/context/ExchangeRateContext'
+import { isSupabaseConfigured } from '@/auth/supabase'
 
 // Lazy load pages
 const Dashboard = lazy(() => import('@/ui/pages/Dashboard').then(m => ({ default: m.Dashboard })))
@@ -25,6 +29,9 @@ const WorkspaceConfiguration = lazy(() => import('@/ui/pages/WorkspaceConfigurat
 const LockedWorkspace = lazy(() => import('@/ui/pages/LockedWorkspace').then(m => ({ default: m.LockedWorkspace })))
 const CurrencyConverter = lazy(() => import('@/ui/pages/CurrencyConverter').then(m => ({ default: m.CurrencyConverter })))
 const ConnectionConfiguration = lazy(() => import('@/ui/pages/ConnectionConfiguration').then(m => ({ default: m.ConnectionConfiguration })))
+
+// @ts-ignore
+const isElectron = !!window.__TAURI_INTERNALS__
 
 // Preload list for Electron
 const pages = [
@@ -54,14 +61,119 @@ function LoadingState() {
     )
 }
 
+function UpdateHandler() {
+    const { setPendingUpdate } = useWorkspace()
+    const { t } = useTranslation()
 
-import { ExchangeRateProvider } from '@/context/ExchangeRateContext'
-import { isSupabaseConfigured } from '@/auth/supabase'
+    const checkForUpdates = useCallback(async (isManual = false) => {
+        if (!isElectron) return
+
+        try {
+            const { check } = await import('@tauri-apps/plugin-updater')
+            const { ask, message } = await import('@tauri-apps/plugin-dialog')
+
+            console.log('[Tauri] Checking for updates...')
+            const update = await check()
+
+            if (update) {
+                console.log(`[Tauri] Update available: ${update.version}`)
+
+                const shouldUpdate = await ask(
+                    t('updater.message', { version: update.version }),
+                    {
+                        title: t('updater.title'),
+                        kind: 'info',
+                        okLabel: t('updater.updateNow'),
+                        cancelLabel: t('updater.later'),
+                    }
+                )
+
+                if (shouldUpdate) {
+                    let downloaded = 0
+                    let contentLength: number | undefined = 0
+
+                    await update.downloadAndInstall((event) => {
+                        switch (event.event) {
+                            case 'Started':
+                                contentLength = event.data.contentLength
+                                console.log(`[Tauri] Started downloading ${event.data.contentLength} bytes`)
+                                break
+                            case 'Progress':
+                                downloaded += event.data.chunkLength
+                                console.log(`[Tauri] Downloaded ${downloaded} from ${contentLength}`)
+                                break
+                            case 'Finished':
+                                console.log('[Tauri] Download finished')
+                                break
+                        }
+                    })
+
+                    console.log('[Tauri] Update installed. The installer will now replace the application.')
+                } else {
+                    console.log('[Tauri] User deferred update.')
+                    setPendingUpdate({
+                        version: update.version,
+                        date: update.date,
+                        body: update.body
+                    })
+                }
+            } else {
+                console.log('[Tauri] No updates available')
+                if (isManual) {
+                    await message(t('settings.messages.noUpdate'), {
+                        title: t('updater.title'),
+                        kind: 'info',
+                    })
+                }
+            }
+        } catch (error) {
+            console.error('[Tauri] Failed to check for updates:', error)
+        }
+    }, [t, setPendingUpdate])
+
+    useEffect(() => {
+        if (isElectron) {
+            checkForUpdates()
+
+            const handleManualCheck = () => {
+                checkForUpdates(true)
+            }
+
+            window.addEventListener('check-for-updates', handleManualCheck)
+
+            const handleKeyDown = async (e: KeyboardEvent) => {
+                if (e.key === 'F11') {
+                    e.preventDefault()
+                    const { getCurrentWindow } = await import('@tauri-apps/api/window')
+                    const window = getCurrentWindow()
+                    const fullscreen = await window.isFullscreen()
+                    const maximized = await window.isMaximized()
+
+                    console.log('[Tauri] F11: Toggling fullscreen to:', !fullscreen, '(Maximized:', maximized, ')')
+
+                    if (!fullscreen && maximized) {
+                        await window.unmaximize()
+                    }
+
+                    await window.setFullscreen(!fullscreen)
+                }
+            }
+
+            window.addEventListener('keydown', handleKeyDown)
+            return () => {
+                window.removeEventListener('keydown', handleKeyDown)
+                window.removeEventListener('check-for-updates', handleManualCheck)
+            }
+        }
+    }, [checkForUpdates])
+
+    return null
+}
+
+
+
 
 function App() {
-    // @ts-ignore
-    const isElectron = !!window.__TAURI_INTERNALS__;
-
     // Hard Guard for Electron Connection Configuration
     // If we are in Electron and Supabase is not configured, we catch it here
     // effectively preventing the rest of the app (AuthProvider, etc.) from loading.
@@ -77,79 +189,19 @@ function App() {
         if (isElectron) {
             console.log('[Tauri] Pre-loading all pages for snappy navigation...')
             pages.forEach(load => load())
-
-            const checkForUpdates = async () => {
-                try {
-                    const { check } = await import('@tauri-apps/plugin-updater')
-
-                    console.log('[Tauri] Checking for updates...')
-                    const update = await check()
-
-                    if (update) {
-                        console.log(`[Tauri] Update available: ${update.version}`)
-                        console.log(`[Tauri] Release date: ${update.date}`)
-
-                        let downloaded = 0
-                        let contentLength: number | undefined = 0
-
-                        await update.downloadAndInstall((event) => {
-                            switch (event.event) {
-                                case 'Started':
-                                    contentLength = event.data.contentLength
-                                    console.log(`[Tauri] Started downloading ${event.data.contentLength} bytes`)
-                                    break
-                                case 'Progress':
-                                    downloaded += event.data.chunkLength
-                                    console.log(`[Tauri] Downloaded ${downloaded} from ${contentLength}`)
-                                    break
-                                case 'Finished':
-                                    console.log('[Tauri] Download finished')
-                                    break
-                            }
-                        })
-
-                        console.log('[Tauri] Update installed. The installer will now replace the application.')
-                        // On Windows, the NSIS installer handles closing and restarting the app.
-                        // Manual relaunch can cause file locks or duplicate installations.
-                    } else {
-                        console.log('[Tauri] No updates available')
-                    }
-                } catch (error) {
-                    console.error('[Tauri] Failed to check for updates:', error)
-                }
-            }
-
-            checkForUpdates()
-
-            const handleKeyDown = async (e: KeyboardEvent) => {
-                if (e.key === 'F11') {
-                    e.preventDefault()
-                    const { getCurrentWindow } = await import('@tauri-apps/api/window')
-                    const window = getCurrentWindow()
-                    const fullscreen = await window.isFullscreen()
-                    const maximized = await window.isMaximized()
-
-                    console.log('[Tauri] F11: Toggling fullscreen to:', !fullscreen, '(Maximized:', maximized, ')')
-
-                    // If we are entering fullscreen and currently maximized, unmaximize first
-                    // to ensure the OS taskbar hides correctly for undecorated windows.
-                    if (!fullscreen && maximized) {
-                        await window.unmaximize()
-                    }
-
-                    await window.setFullscreen(!fullscreen)
-                }
-            }
-
-            window.addEventListener('keydown', handleKeyDown)
-            return () => window.removeEventListener('keydown', handleKeyDown)
         }
     }, [])
+
+
+
+
+
 
     return (
         <>
             <AuthProvider>
                 <WorkspaceProvider>
+                    <UpdateHandler />
                     <TitleBar />
                     <ExchangeRateProvider>
                         <Suspense fallback={<LoadingState />}>

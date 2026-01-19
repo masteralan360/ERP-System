@@ -32,6 +32,8 @@
     },
     "shell:allow-open",
     "dialog:default",
+    "dialog:allow-ask",
+    "dialog:allow-message",
     "updater:default",
     "process:default"
   ]

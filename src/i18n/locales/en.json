@@ -619,5 +619,14 @@
             "description": "This report summarizes the sales performance for the selected period. Revenue is calculated based on settlement totals per staff member. Targets are set based on the number of completed sales.",
             "signature": "Authorized Signature"
         }
+    },
+    "updater": {
+        "available": "Update Available",
+        "title": "New Update Available",
+        "message": "A new version ({{version}}) is available. Would you like to update now?",
+        "updateNow": "Update Now",
+        "later": "Later",
+        "downloading": "Downloading update...",
+        "ready": "Update ready to install"
     }
 }
