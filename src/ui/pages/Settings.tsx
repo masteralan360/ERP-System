@@ -13,7 +13,6 @@ import { Moon, Sun, Monitor, Unlock, Server } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { getAppSettingSync, setAppSetting } from '@/local-db/settings'
 import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 
 export function Settings() {
     const { user, signOut, isSupabaseConfigured } = useAuth()
@@ -63,15 +62,10 @@ export function Settings() {
     // Tauri updater doesn't use event listeners for status in the same way, logic is inside handleCheckForUpdates
 
     const handleCheckForUpdates = async () => {
-        if (updateStatus?.status === 'downloaded') {
-            await relaunch();
-            return;
-        }
-
         setUpdateStatus({ status: 'checking' })
         try {
             const update = await check();
-            if (update && update.available) {
+            if (update) {
                 setUpdateStatus({ status: 'available', version: update.version });
 
                 let downloaded = 0;

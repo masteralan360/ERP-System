@@ -78,6 +78,50 @@ function App() {
             console.log('[Tauri] Pre-loading all pages for snappy navigation...')
             pages.forEach(load => load())
 
+            const checkForUpdates = async () => {
+                try {
+                    const { check } = await import('@tauri-apps/plugin-updater')
+                    const { relaunch } = await import('@tauri-apps/plugin-process')
+
+                    console.log('[Tauri] Checking for updates...')
+                    const update = await check()
+
+                    if (update) {
+                        console.log(`[Tauri] Update available: ${update.version}`)
+                        console.log(`[Tauri] Release date: ${update.date}`)
+
+                        let downloaded = 0
+                        let contentLength: number | undefined = 0
+
+                        await update.downloadAndInstall((event) => {
+                            switch (event.event) {
+                                case 'Started':
+                                    contentLength = event.data.contentLength
+                                    console.log(`[Tauri] Started downloading ${event.data.contentLength} bytes`)
+                                    break
+                                case 'Progress':
+                                    downloaded += event.data.chunkLength
+                                    console.log(`[Tauri] Downloaded ${downloaded} from ${contentLength}`)
+                                    break
+                                case 'Finished':
+                                    console.log('[Tauri] Download finished')
+                                    break
+                            }
+                        })
+
+                        console.log('[Tauri] Update installed. The installer will now replace the application.')
+                        // On Windows, the NSIS installer handles closing and restarting the app.
+                        // Manual relaunch can cause file locks or duplicate installations.
+                    } else {
+                        console.log('[Tauri] No updates available')
+                    }
+                } catch (error) {
+                    console.error('[Tauri] Failed to check for updates:', error)
+                }
+            }
+
+            checkForUpdates()
+
             const handleKeyDown = async (e: KeyboardEvent) => {
                 if (e.key === 'F11') {
                     e.preventDefault()
