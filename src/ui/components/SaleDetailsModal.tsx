@@ -91,25 +91,25 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
                             <div className="font-medium flex items-center gap-2">
                                 {sale.payment_method === 'fib' && (
                                     <>
-                                        <img src="./icons/FIB24x24.jpg" alt="FIB" className="w-5 h-5 rounded" />
+                                        <img src="./icons/fib.svg" alt="FIB" className="w-5 h-5 rounded" />
                                         FIB
                                     </>
                                 )}
                                 {sale.payment_method === 'qicard' && (
                                     <>
-                                        <img src="./icons/QIcard24x24.png" alt="QiCard" className="w-5 h-5 rounded" />
+                                        <img src="./icons/qi.svg" alt="QiCard" className="w-5 h-5 rounded" />
                                         QiCard
                                     </>
                                 )}
                                 {sale.payment_method === 'zaincash' && (
                                     <>
-                                        <img src="./icons/zain24x24.png" alt="ZainCash" className="w-5 h-5 rounded" />
+                                        <img src="./icons/zain.svg" alt="ZainCash" className="w-5 h-5 rounded" />
                                         ZainCash
                                     </>
                                 )}
                                 {sale.payment_method === 'fastpay' && (
                                     <>
-                                        <img src="./icons/fastpay24x24.jpg" alt="FastPay" className="w-5 h-5 rounded" />
+                                        <img src="./icons/fastpay.svg" alt="FastPay" className="w-5 h-5 rounded" />
                                         FastPay
                                     </>
                                 )}

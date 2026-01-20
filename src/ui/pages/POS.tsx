@@ -38,7 +38,8 @@ import {
     Menu,
     Pencil,
     Coins,
-    RefreshCw
+    RefreshCw,
+    X
 } from 'lucide-react'
 import { BarcodeScanner } from 'react-barcode-scanner'
 import 'react-barcode-scanner/polyfill'
@@ -114,11 +115,15 @@ export function POS() {
     const [paymentType, setPaymentType] = useState<'cash' | 'digital'>('cash')
     const [digitalProvider, setDigitalProvider] = useState<'fib' | 'qicard' | 'zaincash' | 'fastpay'>('fib')
     // Filter products
-    const filteredProducts = products.filter(
-        (p) =>
-            p.name.toLowerCase().includes(search.toLowerCase()) ||
-            p.sku.toLowerCase().includes(search.toLowerCase())
-    )
+    const filteredProducts = products.filter((p) => {
+        const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (p.sku || '').toLowerCase().includes(search.toLowerCase())
+
+        if (selectedCategory !== 'all') {
+            return matchesSearch && p.categoryId === selectedCategory
+        }
+        return matchesSearch
+    })
 
     const getDisplayImageUrl = (url?: string) => {
         if (!url) return '';
@@ -897,6 +902,10 @@ export function POS() {
                                 handleCheckout={handleCheckout}
                                 isLoading={isLoading}
                                 getDisplayImageUrl={getDisplayImageUrl}
+                                products={products}
+                                convertPrice={convertPrice}
+                                openPriceEdit={openPriceEdit}
+                                clearNegotiatedPrice={clearNegotiatedPrice}
                             />
                         )}
                     </div>
@@ -1237,7 +1246,7 @@ export function POS() {
                                                 title="FIB"
                                             >
                                                 <img
-                                                    src="./icons/FIB24x24.jpg"
+                                                    src="./icons/fib.svg"
                                                     alt="FIB"
                                                     className="w-6 h-6 rounded"
                                                 />
@@ -1253,7 +1262,7 @@ export function POS() {
                                                 title="QiCard"
                                             >
                                                 <img
-                                                    src="./icons/QIcard24x24.png"
+                                                    src="./icons/qi.svg"
                                                     alt="QiCard"
                                                     className="w-6 h-6 rounded"
                                                 />
@@ -1270,7 +1279,7 @@ export function POS() {
                                                 title="ZainCash"
                                             >
                                                 <img
-                                                    src="./icons/zain24x24.png"
+                                                    src="./icons/zain.svg"
                                                     alt="ZainCash"
                                                     className="w-6 h-6 rounded"
                                                 />
@@ -1287,7 +1296,7 @@ export function POS() {
                                                 title="FastPay"
                                             >
                                                 <img
-                                                    src="./icons/fastpay24x24.jpg"
+                                                    src="./icons/fastpay.svg"
                                                     alt="FastPay"
                                                     className="w-6 h-6 rounded"
                                                 />
@@ -1743,9 +1752,13 @@ interface MobileCartProps {
     handleCheckout: () => void
     isLoading: boolean
     getDisplayImageUrl: (url: string) => string
+    products: Product[]
+    convertPrice: (amount: number, from: CurrencyCode, to: CurrencyCode) => number
+    openPriceEdit: (productId: string, currentPrice: number) => void
+    clearNegotiatedPrice: (productId: string) => void
 }
 
-const MobileCart = ({ cart, removeFromCart, updateQuantity, features, totalAmount, settlementCurrency, paymentType, setPaymentType, digitalProvider, setDigitalProvider, handleCheckout, isLoading, getDisplayImageUrl }: MobileCartProps) => (
+const MobileCart = ({ cart, removeFromCart, updateQuantity, features, totalAmount, settlementCurrency, paymentType, setPaymentType, digitalProvider, setDigitalProvider, handleCheckout, isLoading, getDisplayImageUrl, products, convertPrice, openPriceEdit, clearNegotiatedPrice }: MobileCartProps) => (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-left-4 duration-300">
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-40">
             {cart.length === 0 ? (
@@ -1754,41 +1767,88 @@ const MobileCart = ({ cart, removeFromCart, updateQuantity, features, totalAmoun
                     <p className="font-bold text-lg">Your cart is empty</p>
                 </div>
             ) : (
-                cart.map((item) => (
-                    <div key={item.product_id} className="flex gap-4 bg-card p-4 rounded-[2rem] border border-border shadow-sm group">
-                        <div className="w-20 h-20 bg-muted/30 rounded-2xl overflow-hidden shrink-0">
-                            {item.imageUrl ? (
-                                <img src={getDisplayImageUrl(item.imageUrl)} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center opacity-10">
-                                    <Zap className="w-8 h-8" />
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                            <div className="flex justify-between items-start gap-2">
-                                <h3 className="font-bold text-sm truncate">{item.name}</h3>
-                                <button onClick={() => removeFromCart(item.product_id)} className="p-1 -me-1 text-muted-foreground hover:text-destructive">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                cart.map((item) => {
+                    const product = products.find(p => p.id === item.product_id)
+                    const originalCurrency = (product?.currency || 'usd') as CurrencyCode
+                    const settlementCurr = settlementCurrency as CurrencyCode
+                    const unitPrice = item.negotiated_price ?? item.price
+                    const convertedUnitPrice = convertPrice(unitPrice, originalCurrency, settlementCurr)
+                    const isExchanged = originalCurrency !== settlementCurr
+
+                    return (
+                        <div key={item.product_id} className="flex gap-4 bg-card p-4 rounded-[2rem] border border-border shadow-sm group">
+                            <div className="w-20 h-20 bg-muted/30 rounded-2xl overflow-hidden shrink-0">
+                                {item.imageUrl ? (
+                                    <img src={getDisplayImageUrl(item.imageUrl)} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center opacity-10">
+                                        <Zap className="w-8 h-8" />
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex justify-between items-end">
-                                <div className="text-primary font-black">
-                                    {formatCurrency(item.negotiated_price ?? item.price, 'usd', features.iqd_display_preference)}
+                            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                                <div className="flex justify-between items-start gap-2">
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="font-bold text-sm truncate flex-1">{item.name}</h3>
+                                            <div className="text-primary font-black text-sm whitespace-nowrap flex items-center gap-1">
+                                                {formatCurrency(convertedUnitPrice * item.quantity, settlementCurr, features.iqd_display_preference)}
+                                                <button
+                                                    onClick={() => openPriceEdit(item.product_id, item.negotiated_price ?? item.price)}
+                                                    className="p-1 rounded-md hover:bg-muted text-primary/40 hover:text-primary transition-colors"
+                                                >
+                                                    <Pencil className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-[10px] space-y-0.5 mt-1">
+                                            <div className={cn(
+                                                "text-muted-foreground transition-all duration-300",
+                                                item.negotiated_price !== undefined ? "line-through opacity-50" : ""
+                                            )}>
+                                                {formatCurrency(item.price, originalCurrency, features.iqd_display_preference)} x {item.quantity}
+                                            </div>
+
+                                            {item.negotiated_price !== undefined && (
+                                                <div className="text-emerald-500 font-bold flex items-center gap-1 animate-in slide-in-from-left-2 duration-300">
+                                                    {formatCurrency(item.negotiated_price, originalCurrency, features.iqd_display_preference)} x {item.quantity}
+                                                    <button
+                                                        onClick={() => clearNegotiatedPrice(item.product_id)}
+                                                        className="p-0.5 rounded-full hover:bg-destructive/10 text-destructive transition-colors"
+                                                    >
+                                                        <X className="w-2.5 h-2.5" />
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {isExchanged && (
+                                                <div className="text-primary/40 font-medium">
+                                                    ≈ {formatCurrency(convertedUnitPrice, settlementCurr, features.iqd_display_preference)} each
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => removeFromCart(item.product_id)} className="p-1 -me-1 text-muted-foreground/30 hover:text-destructive transition-colors shrink-0">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
-                                <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-0.5 border border-border/50">
-                                    <button onClick={() => updateQuantity(item.product_id, -1)} className="p-1.5 hover:bg-background rounded-lg">
-                                        <Minus className="w-3 h-3" />
-                                    </button>
-                                    <span className="font-bold text-xs min-w-[1rem] text-center">{item.quantity}</span>
-                                    <button onClick={() => updateQuantity(item.product_id, 1)} className="p-1.5 hover:bg-background rounded-lg">
-                                        <Plus className="w-3 h-3" />
-                                    </button>
+
+                                <div className="flex justify-end mt-2">
+                                    <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-0.5 border border-border/50 h-fit">
+                                        <button onClick={() => updateQuantity(item.product_id, -1)} className="p-1.5 hover:bg-background rounded-lg transition-colors">
+                                            <Minus className="w-3 h-3" />
+                                        </button>
+                                        <span className="font-bold text-sm min-w-[0.5rem] text-center">{item.quantity}</span>
+                                        <button onClick={() => updateQuantity(item.product_id, 1)} className="p-1.5 hover:bg-background rounded-lg transition-colors text-primary">
+                                            <Plus className="w-3 h-3" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                ))
+                    )
+                })
             )}
         </div>
 
@@ -1829,8 +1889,8 @@ const MobileCart = ({ cart, removeFromCart, updateQuantity, features, totalAmoun
                             )}
                         >
                             <img
-                                src={`./icons/${provider === 'fib' ? 'FIB24x24.jpg' : provider === 'qicard' ? 'QIcard24x24.png' : provider === 'zaincash' ? 'zain24x24.png' : 'fastpay24x24.jpg'}`}
-                                className="w-10 h-10 rounded-lg"
+                                src={`./icons/${provider === 'fib' ? 'fib.svg' : provider === 'qicard' ? 'qi.svg' : provider === 'zaincash' ? 'zain.svg' : 'fastpay.svg'}`}
+                                className="w-10 h-10 rounded-lg object-contain"
                             />
                         </button>
                     ))}
@@ -1854,17 +1914,14 @@ const MobileCart = ({ cart, removeFromCart, updateQuantity, features, totalAmoun
             </div>
 
             <div className="flex gap-4 pt-2">
-                <Button variant="outline" className="flex-1 h-14 rounded-2xl text-base font-bold border-2 hover:bg-muted/50">
-                    Save
-                </Button>
                 <Button
-                    className="flex-1 h-14 rounded-2xl text-lg font-black bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all text-white"
+                    className="flex-1 h-14 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 active:scale-95 transition-all text-white"
                     onClick={handleCheckout}
                     disabled={cart.length === 0 || isLoading}
                 >
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (
                         <div className="flex items-center gap-2">
-                            <span>Charge</span>
+                            <span>Checkout</span>
                             <Plus className="w-5 h-5" />
                         </div>
                     )}
