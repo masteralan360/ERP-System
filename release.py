@@ -76,7 +76,7 @@ class ReleaseApp:
     def __init__(self, root):
         self.root = root
         root.title("IraqCore Release Helper")
-        root.geometry("400x300")
+        root.geometry("400x450")
         root.resizable(False, False)
         
         # Style
@@ -109,18 +109,9 @@ class ReleaseApp:
         # Update message when version changes
         self.version_var.trace('w', self.update_msg)
         
-        # APK Release Options
-        self.apk_var = tk.BooleanVar(value=True)
-        self.apk_check = ttk.Checkbutton(root, text="Step 5: Release APK (IraqCore)", variable=self.apk_var)
-        self.apk_check.pack(pady=5)
-        
-        self.skip_build_var = tk.BooleanVar(value=False)
-        self.skip_build_check = ttk.Checkbutton(root, text="   └─ Skip Build (Use Existing)", variable=self.skip_build_var)
-        self.skip_build_check.pack(pady=2)
-        
         # Buttons
         btn_frame = ttk.Frame(root)
-        btn_frame.pack(pady=15)
+        btn_frame.pack(pady=10)
         
         ttk.Button(btn_frame, text="🚀 Release", command=self.release).pack(side=tk.LEFT, padx=10)
         ttk.Button(btn_frame, text="❌ Cancel", command=root.quit).pack(side=tk.LEFT, padx=10)
@@ -128,57 +119,81 @@ class ReleaseApp:
         # Status
         self.status_var = tk.StringVar(value="Ready")
         ttk.Label(root, textvariable=self.status_var, foreground='gray').pack(pady=5)
-    
+        
+        # Local Build Section (Separated from Release)
+        ttk.Separator(root, orient='horizontal').pack(fill='x', padx=20, pady=10)
+        
+        ttk.Label(root, text="Local Development Tools", font=('Segoe UI', 9, 'bold')).pack()
+        
+        local_btn_frame = ttk.Frame(root)
+        local_btn_frame.pack(pady=5)
+        
+        ttk.Button(local_btn_frame, text="�️ Build Local APK", command=self.build_apk_local_cmd).pack(padx=10)
+        
+        ttk.Label(root, text="(Use this only to test the APK on your phone manually)", 
+                  foreground='#666666', font=('Segoe UI', 8, 'italic')).pack()
+
     def update_msg(self, *args):
         self.msg_var.set(f"Release v{self.version_var.get()}")
     
-    def find_and_rename_apk(self):
-        """Locate generated APK and rename to IraqCore.apk"""
-        # Potential Tauri APK output paths
-        potential_paths = [
-            # Universal Release (User's actual path)
-            SCRIPT_DIR / "src-tauri" / "gen" / "android" / "app" / "build" / "outputs" / "apk" / "universal" / "release" / "app-universal-release-unsigned.apk",
-            # Standard Release
-            SCRIPT_DIR / "src-tauri" / "gen" / "android" / "app" / "build" / "outputs" / "apk" / "release" / "app-release-unsigned.apk",
-            # Standard Debug
-            SCRIPT_DIR / "src-tauri" / "gen" / "android" / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
-        ]
-        
-        apk_path = None
-        for p in potential_paths:
-            if p.exists():
-                apk_path = p
-                break
-        
-        output_apk = SCRIPT_DIR / "IraqCore.apk"
-        
-        if apk_path:
-            import shutil
-            shutil.copy2(apk_path, output_apk)
-            return True, f"Found APK at {apk_path.name} and renamed to IraqCore.apk"
+    def build_apk_local_cmd(self):
+        """Dedicated command for local build button"""
+        if not messagebox.askyesno("Confirm Local Build", 
+            "This will build the APK on your computer (takes a few minutes).\n\n"
+            "Note: GitHub already builds this automatically during release.\n\n"
+            "Continue?"):
+            return
+            
+        success, message = self.build_apk()
+        if success:
+            messagebox.showinfo("Success", message)
         else:
-            return False, "No APK found in build folders. Please build the APK first."
+            messagebox.showerror("Error", message)
+        self.status_var.set("Ready")
 
     def build_apk(self):
-        """Run android build"""
+        """Run android build and rename APK"""
         try:
-            self.status_var.set("Building Android APK (Release)...")
+            self.status_var.set("Building Local Android APK...")
             self.root.update()
             
             # Run npm run android:build:release (tauri android build)
             subprocess.run(['npm.cmd', 'run', 'android:build:release'], cwd=SCRIPT_DIR, check=True, shell=True)
-            return True, "Build successful"
+            
+            # Potential Tauri APK output paths
+            potential_paths = [
+                SCRIPT_DIR / "src-tauri" / "gen" / "android" / "app" / "build" / "outputs" / "apk" / "universal" / "release" / "app-universal-release-unsigned.apk",
+                SCRIPT_DIR / "src-tauri" / "gen" / "android" / "app" / "build" / "outputs" / "apk" / "release" / "app-release-unsigned.apk",
+                SCRIPT_DIR / "src-tauri" / "gen" / "android" / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
+            ]
+            
+            apk_path = None
+            for p in potential_paths:
+                if p.exists():
+                    apk_path = p
+                    break
+            
+            output_apk = SCRIPT_DIR / "IraqCore.apk"
+            
+            if apk_path:
+                import shutil
+                shutil.copy2(apk_path, output_apk)
+                self.status_var.set("Ready")
+                return True, "APK built and renamed to IraqCore.apk"
+            else:
+                self.status_var.set("Failed")
+                return False, f"APK not found at {apk_path}"
                 
         except subprocess.CalledProcessError as e:
+            self.status_var.set("Failed")
             return False, f"Build error: {e}"
         except Exception as e:
+            self.status_var.set("Failed")
             return False, f"Unexpected error: {e}"
 
     def release(self):
         version = self.version_var.get()
         msg = self.msg_var.get()
-        release_apk = self.apk_var.get()
-        skip_build = self.skip_build_var.get()
         
         if not version or not msg:
             messagebox.showerror("Error", "Version and message are required!")
@@ -188,14 +203,11 @@ class ReleaseApp:
             f"1. Update version to {version}",
             f"2. Commit: {msg}",
             f"3. Create tag v{version}",
-            f"4. Push to GitHub"
+            f"4. Push to GitHub (Triggers Auto-Releases)"
         ]
-        if release_apk:
-            action = "Rename" if skip_build else "Build & Release"
-            steps.append(f"5. {action} IraqCore.apk")
             
         if not messagebox.askyesno("Confirm Release", 
-            "This will:\n\n" + "\n".join(steps) + "\n\nContinue?"):
+            "This will start the GitHub release process:\n\n" + "\n".join(steps) + "\n\nContinue?"):
             return
         
         self.status_var.set("Updating version...")
@@ -204,27 +216,13 @@ class ReleaseApp:
         try:
             update_version(version)
             
-            if release_apk:
-                if not skip_build:
-                    success, message = self.build_apk()
-                    if not success:
-                        if not messagebox.askyesno("Build Failed", f"{message}\n\nContinue with Git release anyway?"):
-                            return
-                
-                # Copy/Rename logic (always run if release_apk is checked)
-                success, message = self.find_and_rename_apk()
-                if not success:
-                    if not messagebox.askyesno("APK Error", f"{message}\n\nContinue with Git release anyway?"):
-                        return
-            
             self.status_var.set("Pushing to GitHub...")
             self.root.update()
             
             success, message = run_git_commands(version, msg)
             
             if success:
-                apk_msg = "\n\nIraqCore.apk is ready!" if release_apk else ""
-                messagebox.showinfo("Success", message + apk_msg + "\n\nGo to GitHub to publish the release!")
+                messagebox.showinfo("Success", message + "\n\nGitHub will now build both Windows and Android versions automatically!")
                 self.root.quit()
             else:
                 messagebox.showerror("Error", message)

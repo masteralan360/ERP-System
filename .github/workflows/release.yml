@@ -12,8 +12,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest]
-    runs-on: ${{ matrix.platform }}
+        settings:
+          - platform: windows-latest
+            args: ""
+          - platform: ubuntu-latest
+            args: "--target android"
+
+    runs-on: ${{ matrix.settings.platform }}
 
     steps:
       - name: Checkout repository
@@ -21,6 +26,19 @@ jobs:
 
       - name: Rust setup
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.platform == 'ubuntu-latest' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || '' }}
+
+      - name: Java setup (Android only)
+        if: matrix.settings.platform == 'ubuntu-latest'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Android SDK setup (Android only)
+        if: matrix.settings.platform == 'ubuntu-latest'
+        uses: android-actions/setup-android@v3
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -50,5 +68,6 @@ jobs:
           releaseName: "IraqCore ${{ github.ref_name }}"
           # Ensure latest.json is generated
           includeUpdaterJson: true
+          args: ${{ matrix.settings.args }}
           # Simplify release body
           releaseBody: "See the assets to download this version and install."
