@@ -157,8 +157,9 @@ class ReleaseApp:
             self.status_var.set("Building Local Android APK...")
             self.root.update()
             
-            # Run npm run android:build:release (tauri android build)
-            subprocess.run(['npm.cmd', 'run', 'android:build:release'], cwd=SCRIPT_DIR, check=True, shell=True)
+            # Run npm run android:build (tauri android build --debug)
+            # This version is AUTOMATICALLY SIGNED and can be installed on phones immediately.
+            subprocess.run(['npm.cmd', 'run', 'android:build'], cwd=SCRIPT_DIR, check=True, shell=True)
             
             # Potential Tauri APK output paths
             potential_paths = [

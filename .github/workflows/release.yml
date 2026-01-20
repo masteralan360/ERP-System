@@ -64,16 +64,20 @@ jobs:
 
       - name: Build Android
         if: matrix.settings.platform == 'ubuntu-latest'
-        run: npm run android:build:release
+        run: |
+          npm run android:build:release
+          npm run android:build
         env:
           VITE_SUPABASE_URL: ""
           VITE_SUPABASE_ANON_KEY: ""
 
-      - name: Upload Android APK
+      - name: Upload Android APKs
         if: matrix.settings.platform == 'ubuntu-latest'
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          files: |
+            src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+            src-tauri/gen/android/app/build/outputs/apk/debug/*.apk
           tag_name: ${{ github.ref_name }}
           name: "IraqCore ${{ github.ref_name }}"
           token: ${{ secrets.GITHUB_TOKEN }}
