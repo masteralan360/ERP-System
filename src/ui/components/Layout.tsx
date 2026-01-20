@@ -84,6 +84,11 @@ export function Layout({ children }: LayoutProps) {
                 getVersion().then(setVersion).catch(console.error)
             })
         }
+
+        // Handle mobile sidebar trigger from child components
+        const handleOpen = () => setMobileSidebarOpen(true)
+        window.addEventListener('open-mobile-sidebar', handleOpen)
+        return () => window.removeEventListener('open-mobile-sidebar', handleOpen)
     }, [user?.workspaceId])
 
     const navigation = [
@@ -287,7 +292,8 @@ export function Layout({ children }: LayoutProps) {
                 {/* Top bar */}
                 <header className={cn(
                     "sticky z-30 flex items-center gap-4 px-4 py-3 bg-background/60 backdrop-blur-xl border-b border-border/50",
-                    "top-0" // Always top 0 relative to this container
+                    "top-0", // Always top 0 relative to this container
+                    location === '/pos' && "hidden lg:flex" // Hide on mobile if POS
                 )}>
                     {/* Mobile Toggle */}
                     <button

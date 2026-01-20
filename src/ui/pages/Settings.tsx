@@ -283,19 +283,19 @@ export function Settings() {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Download className="w-5 h-5" />
-                                    Application Updates
+                                    {t('settings.updater.title')}
                                 </CardTitle>
-                                <CardDescription>Check for the latest version of the ERP System.</CardDescription>
+                                <CardDescription>{t('settings.updater.description')}</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <p className="font-medium">Update Status <span className="text-xs font-normal text-muted-foreground font-mono ml-2">(v{version})</span></p>
+                                        <p className="font-medium">{t('settings.updater.status')} <span className="text-xs font-normal text-muted-foreground font-mono ml-2">(v{version})</span></p>
                                         <p className="text-sm text-muted-foreground">
-                                            {updateStatus?.status === 'checking' && 'Checking for updates...'}
-                                            {updateStatus?.status === 'available' && 'Update available! Downloading...'}
-                                            {updateStatus?.status === 'not-available' && 'You are on the latest version.'}
-                                            {updateStatus?.status === 'downloaded' && 'Update downloaded. Restart required.'}
+                                            {updateStatus?.status === 'checking' && t('settings.updater.checking')}
+                                            {updateStatus?.status === 'available' && t('settings.updater.available')}
+                                            {updateStatus?.status === 'not-available' && t('settings.updater.notAvailable')}
+                                            {updateStatus?.status === 'downloaded' && t('settings.updater.downloaded')}
                                             {updateStatus?.status === 'error' && (
                                                 <span className="flex items-center gap-1 text-red-500">
                                                     <AlertCircle className="w-4 h-4" />
@@ -303,7 +303,7 @@ export function Settings() {
                                                 </span>
                                             )}
                                             {updateStatus?.status === 'progress' && `Downloading: ${Math.round(updateStatus.progress)}%`}
-                                            {!updateStatus && 'Click the button to check for updates.'}
+                                            {!updateStatus && t('settings.updater.clickButton')}
                                         </p>
                                     </div>
                                     <Button
@@ -318,7 +318,7 @@ export function Settings() {
                                         ) : (
                                             <RefreshCw className="w-4 h-4 mr-2" />
                                         )}
-                                        {updateStatus?.status === 'downloaded' ? 'Restart to Apply' : 'Check for Updates'}
+                                        {updateStatus?.status === 'downloaded' ? t('settings.updater.restart') : t('settings.updater.clickButton')}
                                     </Button>
                                 </div>
                                 {updateStatus?.status === 'progress' && (

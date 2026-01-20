@@ -10,19 +10,17 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
-    Button
-} from '@/ui/components'
+    DialogTrigger
+} from './dialog'
+import { Button } from './button'
 
-export function ExchangeRateIndicator() {
-    const [, setLocation] = useLocation()
-    const { exchangeData, eurRates, tryRates, status, lastUpdated, refresh } = useExchangeRate()
+
+export function ExchangeRateList({ isMobile = false }: { isMobile?: boolean }) {
+    const { exchangeData, eurRates, tryRates, status, lastUpdated } = useExchangeRate()
     const { features } = useWorkspace()
-    const { t, i18n } = useTranslation()
-    const [isOpen, setIsOpen] = useState(false)
-    const direction = i18n.dir()
+    const { t } = useTranslation()
 
-    const RateContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+    return (
         <div className={cn(
             "flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border w-fit",
             status === 'live' && 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500',
@@ -100,6 +98,14 @@ export function ExchangeRateIndicator() {
             </div>
         </div>
     )
+}
+
+export function ExchangeRateIndicator() {
+    const [, setLocation] = useLocation()
+    const { status, refresh } = useExchangeRate()
+    const { t, i18n } = useTranslation()
+    const [isOpen, setIsOpen] = useState(false)
+    const direction = i18n.dir()
 
     return (
         <div className="flex items-center gap-2">
@@ -113,7 +119,7 @@ export function ExchangeRateIndicator() {
                     <Calculator className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 </button>
 
-                <RateContent />
+                <ExchangeRateList />
 
                 <button
                     onClick={refresh}
@@ -157,7 +163,7 @@ export function ExchangeRateIndicator() {
                         </DialogHeader>
 
                         <div className="p-2">
-                            <RateContent isMobile />
+                            <ExchangeRateList isMobile />
                         </div>
 
                         <div className="p-4 bg-secondary/30 flex flex-col gap-2">

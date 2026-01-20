@@ -309,6 +309,17 @@
     "settings": {
         "title": "Settings",
         "subtitle": "Manage your account and application settings",
+        "updater": {
+            "title": "Application Updates",
+            "description": "Check for the latest version of the ERP System.",
+            "status": "Update Status",
+            "checking": "Checking for updates...",
+            "available": "Update available! Downloading...",
+            "notAvailable": "No updates available.",
+            "error": "Error checking for updates.",
+            "clickButton": "Check for Updates",
+            "restart": "Restart to Apply"
+        },
         "tabs": {
             "general": "General Settings",
             "advanced": "Advanced Settings"

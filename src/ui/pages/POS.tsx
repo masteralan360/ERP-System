@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
 import { supabase } from '@/auth/supabase'
-import { addToOfflineMutations, useProducts, type Product, type CurrencyCode } from '@/local-db'
+import { addToOfflineMutations, useProducts, useCategories, type Product, type Category, type CurrencyCode } from '@/local-db'
 import { db } from '@/local-db/database'
 import { formatCurrency, generateId, cn } from '@/lib/utils'
 import { CartItem } from '@/types'
-import { useWorkspace } from '@/workspace'
+import { useWorkspace, type WorkspaceFeatures } from '@/workspace'
 import { useExchangeRate } from '@/context/ExchangeRateContext'
+import { ExchangeRateResult } from '@/lib/exchangeRate'
 import {
     Button,
     Input,
@@ -16,6 +17,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
+    DialogTrigger,
     useToast,
     Label,
     Switch
@@ -25,18 +27,23 @@ import {
     ShoppingCart,
     Plus,
     Minus,
-    Trash2,
     CreditCard,
     Zap,
     Loader2,
     Barcode,
     Camera,
     Settings as SettingsIcon,
-    Pencil
+    Trash2,
+    TrendingUp,
+    Menu,
+    Pencil,
+    Coins,
+    RefreshCw
 } from 'lucide-react'
 import { BarcodeScanner } from 'react-barcode-scanner'
 import 'react-barcode-scanner/polyfill'
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { ExchangeRateList } from '@/ui/components' // Import ExchangeRateList
 
 export function POS() {
     const { toast } = useToast()
@@ -47,6 +54,8 @@ export function POS() {
     const [search, setSearch] = useState('')
     const [cart, setCart] = useState<CartItem[]>([])
     const [isSkuModalOpen, setIsSkuModalOpen] = useState(false)
+    const [selectedCategory, setSelectedCategory] = useState<string>('all')
+    const categories = useCategories(user?.workspaceId)
     const [skuInput, setSkuInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false)
@@ -61,6 +70,15 @@ export function POS() {
     const [scanDelay, setScanDelay] = useState(() => {
         return Number(localStorage.getItem('scanner_scan_delay')) || 2500
     })
+
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
+    const [mobileView, setMobileView] = useState<'grid' | 'cart'>('grid')
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 1024)
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     // Keyboard Navigation State (Electron Only)
     const [isElectron, setIsElectron] = useState(false)
@@ -108,13 +126,10 @@ export function POS() {
         return convertFileSrc(url);
     }
 
+
     // Exchange Rate for advisory display and calculations
     const { exchangeData, eurRates, tryRates, status, refresh: refreshExchangeRate } = useExchangeRate()
     const settlementCurrency = features.default_currency || 'usd'
-
-    useEffect(() => {
-        refreshExchangeRate()
-    }, [refreshExchangeRate])
 
     const convertPrice = useCallback((amount: number, from: CurrencyCode, to: CurrencyCode) => {
         if (from === to) return amount
@@ -433,7 +448,8 @@ export function POS() {
                     name: product.name,
                     price: product.price,
                     quantity: 1,
-                    max_stock: product.quantity
+                    max_stock: product.quantity,
+                    imageUrl: product.imageUrl
                 }
             ]
         })
@@ -445,15 +461,16 @@ export function POS() {
 
     const updateQuantity = (productId: string, delta: number) => {
         setCart((prev) => {
-            return prev.map((item) => {
+            const updatedCart = prev.map((item) => {
                 if (item.product_id === productId) {
                     const newQty = item.quantity + delta
-                    if (newQty <= 0) return item
+                    if (newQty <= 0) return null // Mark for removal
                     if (newQty > item.max_stock) return item
                     return { ...item, quantity: newQty }
                 }
                 return item
-            })
+            }).filter((item): item is CartItem => item !== null) // Filter out nulls (removed items)
+            return updatedCart
         })
     }
 
@@ -830,417 +847,475 @@ export function POS() {
         }
     }
 
+
+
+
+
     return (
-        <div className="h-[calc(100vh-6rem)] flex gap-4">
-            {/* Products Grid */}
-            <div className="flex-1 flex flex-col gap-4">
-                <div className="flex items-center gap-4 bg-card p-4 rounded-xl border border-border shadow-sm">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                            placeholder={t('pos.searchPlaceholder') || "Search products..."}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            ref={searchInputRef}
-                            className="pl-10 h-12 text-lg"
-                            tabIndex={isElectron ? -1 : 0}
-                        />
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            className="h-12 w-12 rounded-xl relative overflow-hidden"
-                            onClick={() => setIsSkuModalOpen(true)}
-                            title="Scan SKU (Hotkey: P)"
-                            tabIndex={isElectron ? -1 : 0}
-                        >
-                            <Barcode className="w-5 h-5" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="h-12 px-4 rounded-xl relative flex items-center gap-2"
-                            onClick={() => setIsBarcodeModalOpen(true)}
-                            title="Barcode Scanner (Hotkey: K)"
-                            tabIndex={isElectron ? -1 : 0}
-                        >
-                            <Camera className="w-5 h-5" />
-                            <div className={`w-2.5 h-2.5 rounded-full ${isScannerAutoEnabled ? 'bg-emerald-500' : 'bg-red-500'} border border-background shadow-sm`} />
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto pr-2">
-                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {filteredProducts.map((product, index) => (
-                            <button
-                                key={product.id}
-                                ref={el => productRefs.current[index] = el}
-                                onClick={() => addToCart(product)}
-                                disabled={product.quantity <= 0}
-                                className={cn(
-                                    "bg-card hover:bg-accent/50 transition-all duration-200 p-4 rounded-xl border border-border text-left flex flex-col gap-2 relative overflow-hidden group outline-none",
-                                    product.quantity <= 0 ? 'opacity-60 cursor-not-allowed' : '',
-                                    // Keyboard focus highlight (Electron only)
-                                    (isElectron && focusedSection === 'grid' && focusedProductIndex === index) ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.02] shadow-lg z-10 box-shadow-[0_0_0_2px_hsl(var(--primary))]" : ""
-                                )}
-                            >
-                                <div className="absolute top-2 right-2 bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-bold">
-                                    {product.quantity}
-                                </div>
-                                <div className="h-24 w-full bg-muted/20 rounded-lg mb-2 flex items-center justify-center text-muted-foreground overflow-hidden">
-                                    {product.imageUrl ? (
-                                        <img
-                                            src={getDisplayImageUrl(product.imageUrl)}
-                                            alt={product.name}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                // Hide the image and show fallback
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                                const parent = (e.target as HTMLImageElement).parentElement;
-                                                if (parent) {
-                                                    parent.innerHTML = `<span class="text-xs font-medium text-center px-2 line-clamp-3">${product.name}</span>`;
-                                                }
-                                            }}
-                                        />
-                                    ) : (
-                                        <Zap className="w-8 h-8 opacity-20" />
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold truncate" title={product.name}>{product.name}</h3>
-                                    <p className="text-xs text-muted-foreground truncate">{product.sku}</p>
-                                </div>
-                                <div className="mt-auto font-bold text-lg text-primary">
-                                    {formatCurrency(product.price, product.currency, features.iqd_display_preference)}
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Cart Sidebar */}
-            <div className="w-96 bg-card border border-border rounded-xl flex flex-col shadow-xl">
-                <div className="p-4 border-b border-border bg-muted/5">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <ShoppingCart className="w-5 h-5" />
-                        {t('pos.currentSale') || 'Current Sale'}
-                    </h2>
-                    <div className="text-xs text-muted-foreground mt-1">
-                        {totalItems} items
-                    </div>
-                </div>
-
-                <div className="flex-1 p-4 overflow-y-auto">
-                    <div className="space-y-3">
-                        {cart.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-2 py-12">
-                                <ShoppingCart className="w-12 h-12" />
-                                <p>Cart is empty</p>
-                            </div>
+        <div className="h-full flex flex-col lg:flex-row gap-4 overflow-hidden -m-4 lg:m-0">
+            {isMobile ? (
+                <div className="flex-1 flex flex-col h-full bg-background relative">
+                    <MobileHeader
+                        mobileView={mobileView}
+                        setMobileView={setMobileView}
+                        totalItems={totalItems}
+                        refreshExchangeRate={refreshExchangeRate}
+                        exchangeData={exchangeData}
+                        t={t}
+                        toast={toast}
+                    />
+                    <div className="flex-1 overflow-y-auto">
+                        {mobileView === 'grid' ? (
+                            <MobileGrid
+                                t={t}
+                                search={search}
+                                setSearch={setSearch}
+                                setIsSkuModalOpen={setIsSkuModalOpen}
+                                setIsBarcodeModalOpen={setIsBarcodeModalOpen}
+                                filteredProducts={filteredProducts}
+                                cart={cart}
+                                addToCart={addToCart}
+                                updateQuantity={updateQuantity}
+                                features={features}
+                                getDisplayImageUrl={getDisplayImageUrl}
+                                categories={categories}
+                                selectedCategory={selectedCategory}
+                                setSelectedCategory={setSelectedCategory}
+                            />
                         ) : (
-                            cart.map((item, index) => {
-                                const productCurrency = products.find(p => p.id === item.product_id)?.currency || 'usd'
-                                const effectivePrice = item.negotiated_price ?? item.price
-                                const convertedPrice = convertPrice(effectivePrice, productCurrency, settlementCurrency)
-                                const isConverted = productCurrency !== settlementCurrency
-                                const hasNegotiated = item.negotiated_price !== undefined
+                            <MobileCart
+                                cart={cart}
+                                removeFromCart={removeFromCart}
+                                updateQuantity={updateQuantity}
+                                features={features}
+                                totalAmount={totalAmount}
+                                settlementCurrency={settlementCurrency}
+                                paymentType={paymentType}
+                                setPaymentType={setPaymentType}
+                                digitalProvider={digitalProvider}
+                                setDigitalProvider={setDigitalProvider}
+                                handleCheckout={handleCheckout}
+                                isLoading={isLoading}
+                                getDisplayImageUrl={getDisplayImageUrl}
+                            />
+                        )}
+                    </div>
+                </div>
+            ) : (
+                <>
+                    {/* Desktop ... (rest of existing code) */}
+                    {/* Products Grid */}
+                    <div className="flex-1 flex flex-col gap-4">
+                        <div className="flex items-center gap-4 bg-card p-4 rounded-xl border border-border shadow-sm">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    placeholder={t('pos.searchPlaceholder') || "Search products..."}
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    ref={searchInputRef}
+                                    className="pl-10 h-12 text-lg"
+                                    tabIndex={isElectron ? -1 : 0}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="h-12 w-12 rounded-xl relative overflow-hidden"
+                                    onClick={() => setIsSkuModalOpen(true)}
+                                    title="Scan SKU (Hotkey: P)"
+                                    tabIndex={isElectron ? -1 : 0}
+                                >
+                                    <Barcode className="w-5 h-5" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="h-12 px-4 rounded-xl relative flex items-center gap-2"
+                                    onClick={() => setIsBarcodeModalOpen(true)}
+                                    title="Barcode Scanner (Hotkey: K)"
+                                    tabIndex={isElectron ? -1 : 0}
+                                >
+                                    <Camera className="w-5 h-5" />
+                                    <div className={`w-2.5 h-2.5 rounded-full ${isScannerAutoEnabled ? 'bg-emerald-500' : 'bg-red-500'} border border-background shadow-sm`} />
+                                </Button>
+                            </div>
+                        </div>
 
-                                return (
-                                    <div
-                                        key={item.product_id}
-                                        ref={el => cartItemRefs.current[index] = el}
+                        <div className="flex-1 overflow-y-auto pr-2">
+                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {filteredProducts.map((product, index) => (
+                                    <button
+                                        key={product.id}
+                                        ref={el => productRefs.current[index] = el}
+                                        onClick={() => addToCart(product)}
+                                        disabled={product.quantity <= 0}
                                         className={cn(
-                                            "bg-background border border-border p-3 rounded-lg flex gap-3 group transition-all duration-200 scroll-m-2",
-                                            (isElectron && focusedSection === 'cart' && focusedCartIndex === index) ? "ring-2 ring-primary ring-offset-2 ring-offset-background border-primary/50 shadow-md transform scale-[1.01]" : ""
+                                            "bg-card hover:bg-accent/50 transition-all duration-200 p-4 rounded-xl border border-border text-left flex flex-col gap-2 relative overflow-hidden group outline-none",
+                                            product.quantity <= 0 ? 'opacity-60 cursor-not-allowed' : '',
+                                            // Keyboard focus highlight (Electron only)
+                                            (isElectron && focusedSection === 'grid' && focusedProductIndex === index) ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.02] shadow-lg z-10 box-shadow-[0_0_0_2px_hsl(var(--primary))]" : ""
                                         )}
                                     >
+                                        <div className="absolute top-2 right-2 bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-bold">
+                                            {product.quantity}
+                                        </div>
+                                        <div className="h-24 w-full bg-muted/20 rounded-lg mb-2 flex items-center justify-center text-muted-foreground overflow-hidden">
+                                            {product.imageUrl ? (
+                                                <img
+                                                    src={getDisplayImageUrl(product.imageUrl)}
+                                                    alt={product.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        // Hide the image and show fallback
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                        const parent = (e.target as HTMLImageElement).parentElement;
+                                                        if (parent) {
+                                                            parent.innerHTML = `<span class="text-xs font-medium text-center px-2 line-clamp-3">${product.name}</span>`;
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Zap className="w-8 h-8 opacity-20" />
+                                            )}
+                                        </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="font-medium truncate">{item.name}</div>
-                                            <div className="flex flex-col gap-0.5">
-                                                {/* Show original price (grayed out if negotiated) */}
-                                                <div className={cn(
-                                                    "text-xs",
-                                                    hasNegotiated ? "text-muted-foreground/50 line-through" : "text-muted-foreground"
-                                                )}>
-                                                    {formatCurrency(item.price, productCurrency, features.iqd_display_preference)} x {item.quantity}
+                                            <h3 className="font-semibold truncate" title={product.name}>{product.name}</h3>
+                                            <p className="text-xs text-muted-foreground truncate">{product.sku}</p>
+                                        </div>
+                                        <div className="mt-auto font-bold text-lg text-primary">
+                                            {formatCurrency(product.price, product.currency, features.iqd_display_preference)}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Cart Sidebar */}
+                    <div className="w-96 bg-card border border-border rounded-xl flex flex-col shadow-xl">
+                        <div className="p-4 border-b border-border bg-muted/5">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <ShoppingCart className="w-5 h-5" />
+                                {t('pos.currentSale') || 'Current Sale'}
+                            </h2>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                {totalItems} items
+                            </div>
+                        </div>
+
+                        <div className="flex-1 p-4 overflow-y-auto">
+                            <div className="space-y-3">
+                                {cart.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-2 py-12">
+                                        <ShoppingCart className="w-12 h-12" />
+                                        <p>Cart is empty</p>
+                                    </div>
+                                ) : (
+                                    cart.map((item, index) => {
+                                        const productCurrency = products.find(p => p.id === item.product_id)?.currency || 'usd'
+                                        const effectivePrice = item.negotiated_price ?? item.price
+                                        const convertedPrice = convertPrice(effectivePrice, productCurrency, settlementCurrency)
+                                        const isConverted = productCurrency !== settlementCurrency
+                                        const hasNegotiated = item.negotiated_price !== undefined
+
+                                        return (
+                                            <div
+                                                key={item.product_id}
+                                                ref={el => cartItemRefs.current[index] = el}
+                                                className={cn(
+                                                    "bg-background border border-border p-3 rounded-lg flex gap-3 group transition-all duration-200 scroll-m-2",
+                                                    (isElectron && focusedSection === 'cart' && focusedCartIndex === index) ? "ring-2 ring-primary ring-offset-2 ring-offset-background border-primary/50 shadow-md transform scale-[1.01]" : ""
+                                                )}
+                                            >
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium truncate">{item.name}</div>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        {/* Show original price (grayed out if negotiated) */}
+                                                        <div className={cn(
+                                                            "text-xs",
+                                                            hasNegotiated ? "text-muted-foreground/50 line-through" : "text-muted-foreground"
+                                                        )}>
+                                                            {formatCurrency(item.price, productCurrency, features.iqd_display_preference)} x {item.quantity}
+                                                        </div>
+                                                        {/* Show negotiated price if set */}
+                                                        {hasNegotiated && (
+                                                            <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                                                                <span>{formatCurrency(item.negotiated_price!, productCurrency, features.iqd_display_preference)} x {item.quantity}</span>
+                                                                {isAdmin && (
+                                                                    <button
+                                                                        onClick={() => clearNegotiatedPrice(item.product_id)}
+                                                                        className="text-[10px] text-destructive hover:underline"
+                                                                        title={t('pos.clearNegotiatedPrice') || 'Clear'}
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        {isConverted && (
+                                                            <div className="text-[10px] text-primary/60 font-medium">
+                                                                ≈ {formatCurrency(convertedPrice, settlementCurrency, features.iqd_display_preference)} {t('common.each')}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {/* Show negotiated price if set */}
-                                                {hasNegotiated && (
-                                                    <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                                                        <span>{formatCurrency(item.negotiated_price!, productCurrency, features.iqd_display_preference)} x {item.quantity}</span>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <div className="font-bold flex items-center gap-1">
+                                                        <span>{formatCurrency(convertedPrice * item.quantity, settlementCurrency, features.iqd_display_preference)}</span>
+                                                        {/* Admin-only Pencil icon */}
                                                         {isAdmin && (
                                                             <button
-                                                                onClick={() => clearNegotiatedPrice(item.product_id)}
-                                                                className="text-[10px] text-destructive hover:underline"
-                                                                title={t('pos.clearNegotiatedPrice') || 'Clear'}
+                                                                onClick={() => openPriceEdit(item.product_id, item.negotiated_price ?? item.price)}
+                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-muted rounded"
+                                                                title={t('pos.modifyPrice') || 'Modify Price'}
                                                             >
-                                                                ✕
+                                                                <Pencil className="w-3 h-3 text-primary" />
                                                             </button>
                                                         )}
                                                     </div>
-                                                )}
-                                                {isConverted && (
-                                                    <div className="text-[10px] text-primary/60 font-medium">
-                                                        ≈ {formatCurrency(convertedPrice, settlementCurrency, features.iqd_display_preference)} {t('common.each')}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            <div className="font-bold flex items-center gap-1">
-                                                <span>{formatCurrency(convertedPrice * item.quantity, settlementCurrency, features.iqd_display_preference)}</span>
-                                                {/* Admin-only Pencil icon */}
-                                                {isAdmin && (
-                                                    <button
-                                                        onClick={() => openPriceEdit(item.product_id, item.negotiated_price ?? item.price)}
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-muted rounded"
-                                                        title={t('pos.modifyPrice') || 'Modify Price'}
+                                                    {isConverted && !hasNegotiated && (
+                                                        <span className="text-[10px] text-muted-foreground line-through opacity-50">
+                                                            {formatCurrency(item.price * item.quantity, productCurrency, features.iqd_display_preference)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-6 w-6 rounded-md"
+                                                        onClick={() => updateQuantity(item.product_id, -1)}
                                                     >
-                                                        <Pencil className="w-3 h-3 text-primary" />
-                                                    </button>
-                                                )}
+                                                        <Minus className="w-3 h-3" />
+                                                    </Button>
+                                                    <span className="w-4 text-center text-sm font-medium">{item.quantity}</span>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-6 w-6 rounded-md"
+                                                        onClick={() => updateQuantity(item.product_id, 1)}
+                                                        disabled={item.quantity >= item.max_stock}
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 rounded-md text-destructive opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                                                        onClick={() => removeFromCart(item.product_id)}
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            {isConverted && !hasNegotiated && (
-                                                <span className="text-[10px] text-muted-foreground line-through opacity-50">
-                                                    {formatCurrency(item.price * item.quantity, productCurrency, features.iqd_display_preference)}
+                                        )
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-border bg-muted/10 space-y-3">
+                            {/* Exchange Rate Info */}
+                            {(exchangeData || (features.eur_conversion_enabled && eurRates.eur_iqd)) && (
+                                <div className="bg-primary/5 rounded-lg p-2.5 border border-primary/10 space-y-2">
+                                    {/* USD Rate */}
+                                    {exchangeData && (
+                                        <div className="flex justify-between items-center text-[11px]">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-primary/80 uppercase">USD/IQD</span>
+                                                <span className="opacity-50 text-[10px] uppercase">{exchangeData.source}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="opacity-60">100 USD =</span>
+                                                <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
+                                                    {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(exchangeData.rate, 'iqd', features.iqd_display_preference)}
                                                 </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* EUR Rate (Conditional) */}
+                                    {features.eur_conversion_enabled && eurRates.eur_iqd && (
+                                        <div className={cn(
+                                            "flex justify-between items-center text-[11px]",
+                                            exchangeData && "pt-1.5 border-t border-primary/5"
+                                        )}>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-primary/80 uppercase">EUR/IQD</span>
+                                                <span className="opacity-50 text-[10px] uppercase leading-none">{eurRates.eur_iqd.source}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="opacity-60">100 EUR =</span>
+                                                <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
+                                                    {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(eurRates.eur_iqd.rate, 'iqd', features.iqd_display_preference)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* TRY Rate (Conditional) */}
+                                    {features.try_conversion_enabled && tryRates.try_iqd && (
+                                        <div className={cn(
+                                            "flex justify-between items-center text-[11px]",
+                                            (exchangeData || (features.eur_conversion_enabled && eurRates.eur_iqd)) && "pt-1.5 border-t border-primary/5"
+                                        )}>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-primary/80 uppercase">TRY/IQD</span>
+                                                <span className="opacity-50 text-[10px] uppercase leading-none">{tryRates.try_iqd.source}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="opacity-60">100 TRY =</span>
+                                                <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
+                                                    {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(tryRates.try_iqd.rate, 'iqd', features.iqd_display_preference)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground text-sm">Subtotal</span>
+                                    <span className="font-semibold">
+                                        {formatCurrency(totalAmount, settlementCurrency, features.iqd_display_preference)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-xl font-bold text-primary pt-1 border-t border-border/50">
+                                    <span>Total</span>
+                                    <div className="flex flex-col items-end leading-tight">
+                                        <span>{formatCurrency(totalAmount, settlementCurrency, features.iqd_display_preference)}</span>
+                                        <span className="text-[10px] uppercase opacity-50 tracking-tighter">{settlementCurrency}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Payment Method Toggle */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-muted-foreground font-medium">{t('pos.paymentMethod') || 'Payment Method'}</span>
+                                    <div className="flex bg-muted rounded-lg p-0.5 gap-0.5">
+                                        <button
+                                            onClick={() => setPaymentType('cash')}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5",
+                                                paymentType === 'cash'
+                                                    ? "bg-background shadow-sm"
+                                                    : "hover:bg-background/50"
                                             )}
+                                        >
+                                            <CreditCard className="w-3 h-3" />
+                                            {t('pos.cash') || 'Cash'}
+                                        </button>
+                                        <button
+                                            onClick={() => setPaymentType('digital')}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5",
+                                                paymentType === 'digital'
+                                                    ? "bg-background shadow-sm"
+                                                    : "hover:bg-background/50"
+                                            )}
+                                        >
+                                            <Zap className="w-3 h-3" />
+                                            {t('pos.digital') || 'Digital'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Digital Provider Sub-toggle */}
+                                {paymentType === 'digital' && (
+                                    <div className="flex justify-end">
+                                        <div className="flex bg-muted/50 rounded-lg p-0.5 gap-1">
+                                            <button
+                                                onClick={() => setDigitalProvider('fib')}
+                                                className={cn(
+                                                    "p-1.5 rounded-md transition-colors flex items-center gap-1",
+                                                    digitalProvider === 'fib'
+                                                        ? "bg-background shadow-sm ring-1 ring-primary/30"
+                                                        : "hover:bg-background/50 opacity-60"
+                                                )}
+                                                title="FIB"
+                                            >
+                                                <img
+                                                    src="./icons/FIB24x24.jpg"
+                                                    alt="FIB"
+                                                    className="w-6 h-6 rounded"
+                                                />
+                                            </button>
+                                            <button
+                                                onClick={() => setDigitalProvider('qicard')}
+                                                className={cn(
+                                                    "p-1.5 rounded-md transition-colors flex items-center gap-1",
+                                                    digitalProvider === 'qicard'
+                                                        ? "bg-background shadow-sm ring-1 ring-primary/30"
+                                                        : "hover:bg-background/50 opacity-60"
+                                                )}
+                                                title="QiCard"
+                                            >
+                                                <img
+                                                    src="./icons/QIcard24x24.png"
+                                                    alt="QiCard"
+                                                    className="w-6 h-6 rounded"
+                                                />
+                                            </button>
+
+                                            <button
+                                                onClick={() => setDigitalProvider('zaincash')}
+                                                className={cn(
+                                                    "p-1.5 rounded-md transition-colors flex items-center gap-1",
+                                                    digitalProvider === 'zaincash'
+                                                        ? "bg-background shadow-sm ring-1 ring-primary/30"
+                                                        : "hover:bg-background/50 opacity-60"
+                                                )}
+                                                title="ZainCash"
+                                            >
+                                                <img
+                                                    src="./icons/zain24x24.png"
+                                                    alt="ZainCash"
+                                                    className="w-6 h-6 rounded"
+                                                />
+                                            </button>
+
+                                            <button
+                                                onClick={() => setDigitalProvider('fastpay')}
+                                                className={cn(
+                                                    "p-1.5 rounded-md transition-colors flex items-center gap-1",
+                                                    digitalProvider === 'fastpay'
+                                                        ? "bg-background shadow-sm ring-1 ring-primary/30"
+                                                        : "hover:bg-background/50 opacity-60"
+                                                )}
+                                                title="FastPay"
+                                            >
+                                                <img
+                                                    src="./icons/fastpay24x24.jpg"
+                                                    alt="FastPay"
+                                                    className="w-6 h-6 rounded"
+                                                />
+                                            </button>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="h-6 w-6 rounded-md"
-                                                onClick={() => updateQuantity(item.product_id, -1)}
-                                            >
-                                                <Minus className="w-3 h-3" />
-                                            </Button>
-                                            <span className="w-4 text-center text-sm font-medium">{item.quantity}</span>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="h-6 w-6 rounded-md"
-                                                onClick={() => updateQuantity(item.product_id, 1)}
-                                                disabled={item.quantity >= item.max_stock}
-                                            >
-                                                <Plus className="w-3 h-3" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6 rounded-md text-destructive opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                                                onClick={() => removeFromCart(item.product_id)}
-                                            >
-                                                <Trash2 className="w-3 h-3" />
-                                            </Button>
-                                        </div>
                                     </div>
-                                )
-                            })
-                        )}
-                    </div>
-                </div>
-
-                <div className="p-4 border-t border-border bg-muted/10 space-y-3">
-                    {/* Exchange Rate Info */}
-                    {(exchangeData || (features.eur_conversion_enabled && eurRates.eur_iqd)) && (
-                        <div className="bg-primary/5 rounded-lg p-2.5 border border-primary/10 space-y-2">
-                            {/* USD Rate */}
-                            {exchangeData && (
-                                <div className="flex justify-between items-center text-[11px]">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-primary/80 uppercase">USD/IQD</span>
-                                        <span className="opacity-50 text-[10px] uppercase">{exchangeData.source}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="opacity-60">100 USD =</span>
-                                        <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
-                                            {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(exchangeData.rate, 'iqd', features.iqd_display_preference)}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* EUR Rate (Conditional) */}
-                            {features.eur_conversion_enabled && eurRates.eur_iqd && (
-                                <div className={cn(
-                                    "flex justify-between items-center text-[11px]",
-                                    exchangeData && "pt-1.5 border-t border-primary/5"
-                                )}>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-primary/80 uppercase">EUR/IQD</span>
-                                        <span className="opacity-50 text-[10px] uppercase leading-none">{eurRates.eur_iqd.source}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="opacity-60">100 EUR =</span>
-                                        <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
-                                            {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(eurRates.eur_iqd.rate, 'iqd', features.iqd_display_preference)}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* TRY Rate (Conditional) */}
-                            {features.try_conversion_enabled && tryRates.try_iqd && (
-                                <div className={cn(
-                                    "flex justify-between items-center text-[11px]",
-                                    (exchangeData || (features.eur_conversion_enabled && eurRates.eur_iqd)) && "pt-1.5 border-t border-primary/5"
-                                )}>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-primary/80 uppercase">TRY/IQD</span>
-                                        <span className="opacity-50 text-[10px] uppercase leading-none">{tryRates.try_iqd.source}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="opacity-60">100 TRY =</span>
-                                        <span className={cn("font-bold", status === 'error' ? "text-destructive" : "text-primary")}>
-                                            {status === 'error' ? t('common.offline') || 'Offline' : formatCurrency(tryRates.try_iqd.rate, 'iqd', features.iqd_display_preference)}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground text-sm">Subtotal</span>
-                            <span className="font-semibold">
-                                {formatCurrency(totalAmount, settlementCurrency, features.iqd_display_preference)}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xl font-bold text-primary pt-1 border-t border-border/50">
-                            <span>Total</span>
-                            <div className="flex flex-col items-end leading-tight">
-                                <span>{formatCurrency(totalAmount, settlementCurrency, features.iqd_display_preference)}</span>
-                                <span className="text-[10px] uppercase opacity-50 tracking-tighter">{settlementCurrency}</span>
+                                )}
                             </div>
+
+                            <Button
+                                size="lg"
+                                className="w-full h-14 text-xl shadow-lg shadow-primary/20"
+                                onClick={handleCheckout}
+                                disabled={cart.length === 0 || isLoading || (cart.some(item => products.find(p => p.id === item.product_id)?.currency !== settlementCurrency) && (status === 'error' || !exchangeData))}
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                                ) : (
+                                    <CreditCard className="w-6 h-6 mr-2" />
+                                )}
+                                {t('pos.checkout') || 'Checkout'}
+                            </Button>
                         </div>
                     </div>
+                </>
+            )}
 
-                    {/* Payment Method Toggle */}
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground font-medium">{t('pos.paymentMethod') || 'Payment Method'}</span>
-                            <div className="flex bg-muted rounded-lg p-0.5 gap-0.5">
-                                <button
-                                    onClick={() => setPaymentType('cash')}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5",
-                                        paymentType === 'cash'
-                                            ? "bg-background shadow-sm"
-                                            : "hover:bg-background/50"
-                                    )}
-                                >
-                                    <CreditCard className="w-3 h-3" />
-                                    {t('pos.cash') || 'Cash'}
-                                </button>
-                                <button
-                                    onClick={() => setPaymentType('digital')}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5",
-                                        paymentType === 'digital'
-                                            ? "bg-background shadow-sm"
-                                            : "hover:bg-background/50"
-                                    )}
-                                >
-                                    <Zap className="w-3 h-3" />
-                                    {t('pos.digital') || 'Digital'}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Digital Provider Sub-toggle */}
-                        {paymentType === 'digital' && (
-                            <div className="flex justify-end">
-                                <div className="flex bg-muted/50 rounded-lg p-0.5 gap-1">
-                                    <button
-                                        onClick={() => setDigitalProvider('fib')}
-                                        className={cn(
-                                            "p-1.5 rounded-md transition-colors flex items-center gap-1",
-                                            digitalProvider === 'fib'
-                                                ? "bg-background shadow-sm ring-1 ring-primary/30"
-                                                : "hover:bg-background/50 opacity-60"
-                                        )}
-                                        title="FIB"
-                                    >
-                                        <img
-                                            src="./icons/FIB24x24.jpg"
-                                            alt="FIB"
-                                            className="w-6 h-6 rounded"
-                                        />
-                                    </button>
-                                    <button
-                                        onClick={() => setDigitalProvider('qicard')}
-                                        className={cn(
-                                            "p-1.5 rounded-md transition-colors flex items-center gap-1",
-                                            digitalProvider === 'qicard'
-                                                ? "bg-background shadow-sm ring-1 ring-primary/30"
-                                                : "hover:bg-background/50 opacity-60"
-                                        )}
-                                        title="QiCard"
-                                    >
-                                        <img
-                                            src="./icons/QIcard24x24.png"
-                                            alt="QiCard"
-                                            className="w-6 h-6 rounded"
-                                        />
-                                    </button>
-
-                                    <button
-                                        onClick={() => setDigitalProvider('zaincash')}
-                                        className={cn(
-                                            "p-1.5 rounded-md transition-colors flex items-center gap-1",
-                                            digitalProvider === 'zaincash'
-                                                ? "bg-background shadow-sm ring-1 ring-primary/30"
-                                                : "hover:bg-background/50 opacity-60"
-                                        )}
-                                        title="ZainCash"
-                                    >
-                                        <img
-                                            src="./icons/zain24x24.png"
-                                            alt="ZainCash"
-                                            className="w-6 h-6 rounded"
-                                        />
-                                    </button>
-
-                                    <button
-                                        onClick={() => setDigitalProvider('fastpay')}
-                                        className={cn(
-                                            "p-1.5 rounded-md transition-colors flex items-center gap-1",
-                                            digitalProvider === 'fastpay'
-                                                ? "bg-background shadow-sm ring-1 ring-primary/30"
-                                                : "hover:bg-background/50 opacity-60"
-                                        )}
-                                        title="FastPay"
-                                    >
-                                        <img
-                                            src="./icons/fastpay24x24.jpg"
-                                            alt="FastPay"
-                                            className="w-6 h-6 rounded"
-                                        />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <Button
-                        size="lg"
-                        className="w-full h-14 text-xl shadow-lg shadow-primary/20"
-                        onClick={handleCheckout}
-                        disabled={cart.length === 0 || isLoading || (cart.some(item => products.find(p => p.id === item.product_id)?.currency !== settlementCurrency) && (status === 'error' || !exchangeData))}
-                    >
-                        {isLoading ? (
-                            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                        ) : (
-                            <CreditCard className="w-6 h-6 mr-2" />
-                        )}
-                        {t('pos.checkout') || 'Checkout'}
-                    </Button>
-                </div>
-            </div>
-
+            {/* --- Shared Modals (Available in both Mobile & Desktop) --- */}
             {/* Barcode Scanner Modal */}
             <Dialog open={isBarcodeModalOpen} onOpenChange={setIsBarcodeModalOpen}>
                 <DialogContent className="sm:max-w-2xl">
@@ -1442,6 +1517,359 @@ export function POS() {
                     })()}
                 </DialogContent>
             </Dialog>
-        </div >
+        </div>
     )
 }
+
+// --- Mobile UI Components ---
+
+interface MobileHeaderProps {
+    mobileView: 'grid' | 'cart'
+    setMobileView: (view: 'grid' | 'cart') => void
+    totalItems: number
+    refreshExchangeRate: () => void
+    exchangeData: ExchangeRateResult | null
+    t: any
+    toast: any
+}
+
+const MobileHeader = ({ mobileView, setMobileView, totalItems, refreshExchangeRate, exchangeData, t, toast }: MobileHeaderProps) => {
+    return (
+        <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border sticky top-0 z-50 lg:hidden">
+            <button
+                className="p-2 -ms-2 rounded-xl hover:bg-secondary transition-colors"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-sidebar'))}
+            >
+                <Menu className="w-6 h-6 text-muted-foreground" />
+            </button>
+            <button
+                className="bg-secondary/80 backdrop-blur-md px-6 py-2.5 rounded-full flex items-center gap-2 shadow-sm border border-border/50 relative active:scale-95 transition-all"
+                onClick={() => setMobileView(mobileView === 'grid' ? 'cart' : 'grid')}
+            >
+                <ShoppingCart className="w-5 h-5" />
+                <span className="font-bold text-sm tracking-tight">{mobileView === 'grid' ? 'Cart' : 'Catalog'}</span>
+                {totalItems > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-background font-bold shadow-lg animate-in zoom-in">
+                        {totalItems}
+                    </span>
+                )}
+            </button>
+
+            {/* Live Rate Modal (Mobile) */}
+            <Dialog>
+                <DialogTrigger asChild>
+                    <button className="p-2 -me-2 rounded-xl hover:bg-secondary transition-colors cursor-pointer">
+                        <TrendingUp className="w-6 h-6 text-muted-foreground" />
+                    </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl p-0 overflow-hidden border-emerald-500/20">
+                    <DialogHeader className="p-6 border-b bg-emerald-500/5 items-start rtl:items-start text-start rtl:text-start">
+                        <DialogTitle className="flex items-center gap-2 text-emerald-600">
+                            <Coins className="w-5 h-5" />
+                            {t('common.exchangeRates')}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="p-2">
+                        <ExchangeRateList isMobile />
+                    </div>
+
+                    <div className="p-4 bg-secondary/30 flex flex-col gap-2">
+                        <div className="flex gap-2 w-full">
+                            <div className="flex-1" /> {/* Spacer since converter needs location hook not available here easily unless simplified */}
+                            <Button
+                                className="flex-1"
+                                onClick={() => {
+                                    refreshExchangeRate();
+                                    toast({
+                                        title: t('pos.ratesUpdated') || 'Rates Updated',
+                                        description: `USD/IQD: ${exchangeData?.rate || '...'}`,
+                                        duration: 2000
+                                    });
+                                }}
+                            >
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                {t('common.refresh')}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
+    )
+}
+
+interface MobileGridProps {
+    t: any
+    search: string
+    setSearch: (s: string) => void
+    setIsSkuModalOpen: (o: boolean) => void
+    setIsBarcodeModalOpen: (o: boolean) => void
+    filteredProducts: Product[]
+    cart: CartItem[]
+    addToCart: (p: Product) => void
+    updateQuantity: (id: string, d: number) => void
+    features: WorkspaceFeatures
+    getDisplayImageUrl: (url: string) => string
+    categories: Category[]
+    selectedCategory: string
+    setSelectedCategory: (id: string) => void
+}
+
+const MobileGrid = ({ t, search, setSearch, setIsSkuModalOpen, setIsBarcodeModalOpen, filteredProducts, cart, addToCart, updateQuantity, features, getDisplayImageUrl, categories, selectedCategory, setSelectedCategory }: MobileGridProps) => (
+    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
+        {/* Search & Tool Bar */}
+        <div className="flex items-center gap-2 p-4 pb-0">
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                    placeholder={t('pos.searchPlaceholder') || "Search products..."}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10 h-12 rounded-2xl bg-muted/30 border-none shadow-inner text-base"
+                />
+            </div>
+            <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 rounded-2xl border-none bg-muted/30"
+                onClick={() => setIsSkuModalOpen(true)}
+                title="Enter SKU"
+            >
+                <Barcode className="w-5 h-5 text-muted-foreground" />
+            </Button>
+            <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 rounded-2xl border-none bg-muted/30"
+                onClick={() => setIsBarcodeModalOpen(true)}
+            >
+                <Camera className="w-5 h-5 text-muted-foreground" />
+            </Button>
+        </div>
+
+        {/* Categories */}
+        <div className="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-none no-scrollbar">
+            <button
+                key="all"
+                onClick={() => setSelectedCategory('all')}
+                className={cn(
+                    "whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all",
+                    selectedCategory === 'all' ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-card border border-border text-muted-foreground"
+                )}
+            >
+                All Items
+            </button>
+            {categories.map((cat) => (
+                <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={cn(
+                        "whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all",
+                        selectedCategory === cat.id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-card border border-border text-muted-foreground"
+                    )}
+                >
+                    {cat.name}
+                </button>
+            ))}
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-2 gap-4 p-4 pt-0 pb-32">
+            {filteredProducts.map((product) => {
+                const cartItem = cart.find(i => i.product_id === product.id)
+                return (
+                    <div
+                        key={product.id}
+                        className="bg-card rounded-[2rem] border border-border p-3 shadow-sm flex flex-col gap-3 group active:scale-[0.98] transition-all"
+                    >
+                        <div className="aspect-square bg-muted/30 rounded-[1.5rem] overflow-hidden relative" onClick={() => addToCart(product)}>
+                            {product.imageUrl ? (
+                                <img src={getDisplayImageUrl(product.imageUrl)} className="w-full h-full object-cover" />
+                            ) : (
+                                <Zap className="w-10 h-10 absolute inset-0 m-auto opacity-10" />
+                            )}
+                            {product.quantity <= 0 && (
+                                <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center text-xs font-bold text-destructive">
+                                    Out of stock
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex flex-col gap-1 px-1">
+                            <h3 className="font-bold text-sm line-clamp-1">{product.name}</h3>
+                            <div className="text-primary font-black text-sm">
+                                {formatCurrency(product.price, product.currency, features.iqd_display_preference)}
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between bg-muted/30 rounded-2xl p-1 mt-auto">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-xl hover:bg-background"
+                                onClick={() => updateQuantity(product.id, -1)}
+                                disabled={!cartItem}
+                            >
+                                <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="font-bold text-sm min-w-4 text-center">{cartItem?.quantity || 0}</span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-xl hover:bg-background text-primary"
+                                onClick={() => addToCart(product)}
+                                disabled={product.quantity <= 0}
+                            >
+                                <Plus className="w-3 h-3" />
+                            </Button>
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    </div>
+)
+
+interface MobileCartProps {
+    cart: CartItem[]
+    removeFromCart: (id: string) => void
+    updateQuantity: (id: string, d: number) => void
+    features: WorkspaceFeatures
+    totalAmount: number
+    settlementCurrency: string
+    paymentType: 'cash' | 'digital'
+    setPaymentType: (t: 'cash' | 'digital') => void
+    digitalProvider: 'fib' | 'qicard' | 'zaincash' | 'fastpay'
+    setDigitalProvider: (p: 'fib' | 'qicard' | 'zaincash' | 'fastpay') => void
+    handleCheckout: () => void
+    isLoading: boolean
+    getDisplayImageUrl: (url: string) => string
+}
+
+const MobileCart = ({ cart, removeFromCart, updateQuantity, features, totalAmount, settlementCurrency, paymentType, setPaymentType, digitalProvider, setDigitalProvider, handleCheckout, isLoading, getDisplayImageUrl }: MobileCartProps) => (
+    <div className="flex flex-col h-full animate-in fade-in slide-in-from-left-4 duration-300">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-40">
+            {cart.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 opacity-30 gap-4">
+                    <ShoppingCart className="w-20 h-20" />
+                    <p className="font-bold text-lg">Your cart is empty</p>
+                </div>
+            ) : (
+                cart.map((item) => (
+                    <div key={item.product_id} className="flex gap-4 bg-card p-4 rounded-[2rem] border border-border shadow-sm group">
+                        <div className="w-20 h-20 bg-muted/30 rounded-2xl overflow-hidden shrink-0">
+                            {item.imageUrl ? (
+                                <img src={getDisplayImageUrl(item.imageUrl)} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center opacity-10">
+                                    <Zap className="w-8 h-8" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                            <div className="flex justify-between items-start gap-2">
+                                <h3 className="font-bold text-sm truncate">{item.name}</h3>
+                                <button onClick={() => removeFromCart(item.product_id)} className="p-1 -me-1 text-muted-foreground hover:text-destructive">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                            <div className="flex justify-between items-end">
+                                <div className="text-primary font-black">
+                                    {formatCurrency(item.negotiated_price ?? item.price, 'usd', features.iqd_display_preference)}
+                                </div>
+                                <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-0.5 border border-border/50">
+                                    <button onClick={() => updateQuantity(item.product_id, -1)} className="p-1.5 hover:bg-background rounded-lg">
+                                        <Minus className="w-3 h-3" />
+                                    </button>
+                                    <span className="font-bold text-xs min-w-[1rem] text-center">{item.quantity}</span>
+                                    <button onClick={() => updateQuantity(item.product_id, 1)} className="p-1.5 hover:bg-background rounded-lg">
+                                        <Plus className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))
+            )}
+        </div>
+
+        {/* Bottom Panel */}
+        <div className="bg-card border-t border-border rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-6 space-y-6 sticky bottom-0 z-40">
+            {/* Payment Method Toggle */}
+            <div className="flex bg-muted p-1 rounded-2xl gap-1">
+                <button
+                    onClick={() => setPaymentType('cash')}
+                    className={cn(
+                        "flex-1 py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all",
+                        paymentType === 'cash' ? "bg-background shadow-md text-foreground" : "text-muted-foreground opacity-60"
+                    )}
+                >
+                    <CreditCard className="w-4 h-4" /> Cash
+                </button>
+                <button
+                    onClick={() => setPaymentType('digital')}
+                    className={cn(
+                        "flex-1 py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all",
+                        paymentType === 'digital' ? "bg-background shadow-md text-foreground" : "text-muted-foreground opacity-60"
+                    )}
+                >
+                    <Zap className="w-4 h-4" /> Digital
+                </button>
+            </div>
+
+            {/* Digital Provider Sub-toggle */}
+            {paymentType === 'digital' && (
+                <div className="flex justify-center gap-3 animate-in zoom-in duration-200">
+                    {['fib', 'qicard', 'zaincash', 'fastpay'].map((provider) => (
+                        <button
+                            key={provider}
+                            onClick={() => setDigitalProvider(provider as any)}
+                            className={cn(
+                                "p-1 rounded-xl transition-all border-2",
+                                digitalProvider === provider ? "border-primary scale-110 shadow-lg" : "border-transparent opacity-40 grayscale"
+                            )}
+                        >
+                            <img
+                                src={`./icons/${provider === 'fib' ? 'FIB24x24.jpg' : provider === 'qicard' ? 'QIcard24x24.png' : provider === 'zaincash' ? 'zain24x24.png' : 'fastpay24x24.jpg'}`}
+                                className="w-10 h-10 rounded-lg"
+                            />
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            <div className="space-y-3">
+                <div className="flex justify-between items-center text-muted-foreground text-sm font-medium">
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(totalAmount, settlementCurrency, features.iqd_display_preference)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                    <span className="font-bold text-lg text-foreground">Total Amount</span>
+                    <div className="flex flex-col items-end">
+                        <span className="font-black text-2xl text-primary leading-none">
+                            {formatCurrency(totalAmount, settlementCurrency, features.iqd_display_preference)}
+                        </span>
+                        <span className="text-[10px] uppercase font-bold text-primary/40 tracking-widest mt-1">{settlementCurrency}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex gap-4 pt-2">
+                <Button variant="outline" className="flex-1 h-14 rounded-2xl text-base font-bold border-2 hover:bg-muted/50">
+                    Save
+                </Button>
+                <Button
+                    className="flex-1 h-14 rounded-2xl text-lg font-black bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all text-white"
+                    onClick={handleCheckout}
+                    disabled={cart.length === 0 || isLoading}
+                >
+                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (
+                        <div className="flex items-center gap-2">
+                            <span>Charge</span>
+                            <Plus className="w-5 h-5" />
+                        </div>
+                    )}
+                </Button>
+            </div>
+        </div>
+    </div>
+)

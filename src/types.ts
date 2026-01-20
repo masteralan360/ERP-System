@@ -56,4 +56,5 @@ export interface CartItem {
     quantity: number
     max_stock: number
     negotiated_price?: number
+    imageUrl?: string
 }
