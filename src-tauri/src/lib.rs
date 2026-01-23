@@ -9,17 +9,14 @@ pub fn run() {
     .plugin(tauri_plugin_process::init())
     .setup(|app| {
       use tauri::Manager;
-      use window_vibrancy::{apply_acrylic, apply_vibrancy, NSVisualEffectMaterial};
-
       let window = app.get_webview_window("main").unwrap();
-
-      #[cfg(target_os = "macos")]
-      apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
-        .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-
-      #[cfg(target_os = "windows")]
-      apply_acrylic(&window, Some((18, 18, 18, 20)))
-        .expect("Unsupported platform! 'apply_acrylic' is only supported on Windows");
+      
+      // Force disable decorations (Fix for persistent title bar)
+      let _ = window.set_decorations(false);
+      // let _ = window.set_shadow(true);
+      
+      // Show window after configuration
+      let _ = window.show();
 
       if cfg!(debug_assertions) {
         app.handle().plugin(

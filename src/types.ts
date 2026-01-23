@@ -14,6 +14,7 @@ export interface SaleItem {
     converted_unit_price: number
     settlement_currency: string
     negotiated_price?: number
+    inventory_snapshot?: number
     returned_quantity?: number
     is_returned?: boolean
     return_reason?: string
@@ -46,6 +47,10 @@ export interface Sale {
     return_reason?: string
     returned_at?: string
     returned_by?: string
+    // System Verification (offline-first, immutable)
+    system_verified?: boolean
+    system_review_status?: 'approved' | 'flagged' | 'inconsistent'
+    system_review_reason?: string | null
 }
 
 export interface CartItem {

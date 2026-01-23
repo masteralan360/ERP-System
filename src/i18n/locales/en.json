@@ -504,6 +504,7 @@
         "origin": "Origin",
         "total": "Total",
         "details": "Sale Details",
+        "flagged": "Flagged Sale",
         "id": "Sale ID",
         "paymentMethod": "Payment Method",
         "filters": {

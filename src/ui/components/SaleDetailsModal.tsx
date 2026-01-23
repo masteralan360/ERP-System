@@ -44,6 +44,22 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
                     <DialogTitle>{t('sales.details') || 'Sale Details'}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
+                    {sale.system_review_status === 'flagged' && (
+                        <div className="p-3 bg-orange-100 border border-orange-200 dark:bg-orange-500/10 dark:border-orange-500/20 rounded-lg">
+                            <div className="flex items-start gap-2 text-orange-800 dark:text-orange-400">
+                                <span className="text-lg">⚠️</span>
+                                <div className="space-y-1">
+                                    <span className="font-bold text-sm block uppercase tracking-wide">
+                                        {t('sales.flagged') || 'System Review Flagged'}
+                                    </span>
+                                    <p className="text-sm opacity-90">
+                                        {sale.system_review_reason || 'Inconsistent checkout data detected.'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {sale.is_returned && (
                         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                             <div className="flex items-center gap-2 text-destructive dark:text-destructive-foreground">

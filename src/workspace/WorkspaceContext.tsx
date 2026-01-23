@@ -17,6 +17,8 @@ export interface WorkspaceFeatures {
     eur_conversion_enabled: boolean
     try_conversion_enabled: boolean
     locked_workspace: boolean
+    // Negotiated price limit (0-100 percentage, default 100 = no limit)
+    max_discount_percent: number
 }
 
 export interface UpdateInfo {
@@ -47,7 +49,8 @@ const defaultFeatures: WorkspaceFeatures = {
     iqd_display_preference: 'IQD',
     eur_conversion_enabled: false,
     try_conversion_enabled: false,
-    locked_workspace: false
+    locked_workspace: false,
+    max_discount_percent: 100
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined)
@@ -120,7 +123,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                         iqd_display_preference: localWorkspace.iqd_display_preference,
                         eur_conversion_enabled: (localWorkspace as any).eur_conversion_enabled ?? false,
                         try_conversion_enabled: (localWorkspace as any).try_conversion_enabled ?? false,
-                        locked_workspace: (localWorkspace as any).locked_workspace ?? false
+                        locked_workspace: (localWorkspace as any).locked_workspace ?? false,
+                        max_discount_percent: (localWorkspace as any).max_discount_percent ?? 100
                     })
                 } else {
                     setFeatures(defaultFeatures)
@@ -137,7 +141,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                     iqd_display_preference: featureData.iqd_display_preference || 'IQD',
                     eur_conversion_enabled: featureData.eur_conversion_enabled ?? false,
                     try_conversion_enabled: featureData.try_conversion_enabled ?? false,
-                    locked_workspace: featureData.locked_workspace ?? false
+                    locked_workspace: featureData.locked_workspace ?? false,
+                    max_discount_percent: featureData.max_discount_percent ?? 100
                 }
                 setFeatures(fetchedFeatures)
                 setWorkspaceName(featureData.workspace_name || 'My Workspace')

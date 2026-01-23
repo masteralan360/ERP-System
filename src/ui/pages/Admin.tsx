@@ -221,8 +221,8 @@ export function Admin() {
 
     if (!isAuthenticated) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
-                <div className="absolute top-4 right-4 flex items-center gap-2">
+            <div className="min-h-screen flex items-center justify-center bg-background p-4 relative pt-[calc(var(--titlebar-height)+1rem)]">
+                <div className="absolute top-[calc(var(--titlebar-height)+1rem)] right-4 flex items-center gap-2">
                     <LanguageSwitcher />
                     <ThemeToggle />
                 </div>
@@ -269,7 +269,7 @@ export function Admin() {
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground p-4 lg:p-8">
+        <div className="min-h-screen bg-background text-foreground p-4 lg:p-8 pt-[calc(var(--titlebar-height)+1rem)]">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">

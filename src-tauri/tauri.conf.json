@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "IraqCore",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "identifier": "com.iraqcore.app",
   "build": {
     "frontendDist": "../dist",
@@ -18,9 +18,9 @@
         "height": 800,
         "resizable": true,
         "fullscreen": false,
-        "visible": true,
+        "visible": false,
         "decorations": false,
-        "transparent": true
+        "transparent": false
       }
     ],
     "security": {

@@ -9,6 +9,7 @@ import { CartItem } from '@/types'
 import { useWorkspace, type WorkspaceFeatures } from '@/workspace'
 import { useExchangeRate } from '@/context/ExchangeRateContext'
 import { ExchangeRateResult } from '@/lib/exchangeRate'
+import { verifySale, createVerificationSale } from '@/lib/saleVerification'
 import {
     Button,
     Input,
@@ -726,8 +727,22 @@ export function POS() {
                 converted_unit_price: convertedUnitPrice,
                 settlement_currency: settlementCurrency,
                 negotiated_price: item.negotiated_price, // store if negotiated
-                total: convertedUnitPrice * item.quantity
+                total: convertedUnitPrice * item.quantity,
+                // Immutable inventory snapshot at checkout time
+                inventory_snapshot: product?.quantity ?? 0
             }
+        })
+
+        // Run local verification immediately (offline-safe)
+        const verificationSale = createVerificationSale(
+            totalAmount,
+            settlementCurrency,
+            snapshotRate,
+            snapshotSource,
+            itemsWithMetadata
+        )
+        const verificationResult = verifySale(verificationSale, {
+            maxDiscountPercent: features.max_discount_percent
         })
 
         const checkoutPayload = {
@@ -740,7 +755,11 @@ export function POS() {
             exchange_rate_timestamp: snapshotTimestamp,
             exchange_rates: exchangeRatesSnapshot,
             origin: 'pos',
-            payment_method: (paymentType === 'cash' ? 'cash' : digitalProvider) as 'cash' | 'fib' | 'qicard' | 'zaincash' | 'fastpay'
+            payment_method: (paymentType === 'cash' ? 'cash' : digitalProvider) as 'cash' | 'fib' | 'qicard' | 'zaincash' | 'fastpay',
+            // System Verification (offline-first, immutable)
+            system_verified: verificationResult.verified,
+            system_review_status: verificationResult.status,
+            system_review_reason: verificationResult.reason
         }
 
         try {
@@ -779,7 +798,19 @@ export function POS() {
 
             if (err.message === 'OFFLINE_FETCH_ERROR' || !navigator.onLine) {
                 try {
-                    // 1. Save Sale locally
+                    // Run local verification FIRST (before save, but using the data we're about to save)
+                    const verificationSale = createVerificationSale(
+                        totalAmount,
+                        settlementCurrency,
+                        snapshotRate,
+                        snapshotSource,
+                        itemsWithMetadata
+                    )
+                    const verificationResult = verifySale(verificationSale, {
+                        maxDiscountPercent: features.max_discount_percent
+                    })
+
+                    // 1. Save Sale locally (with verification fields)
                     await db.sales.add({
                         id: saleId,
                         workspaceId: user.workspaceId,
@@ -797,10 +828,14 @@ export function POS() {
                         syncStatus: 'pending',
                         lastSyncedAt: null,
                         version: 1,
-                        isDeleted: false
+                        isDeleted: false,
+                        // System Verification (immutable)
+                        systemVerified: verificationResult.verified,
+                        systemReviewStatus: verificationResult.status,
+                        systemReviewReason: verificationResult.reason
                     })
 
-                    // 2. Save Sale Items locally
+                    // 2. Save Sale Items locally (with inventory snapshot)
                     await Promise.all(itemsWithMetadata.map(item =>
                         db.sale_items.add({
                             id: generateId(),
@@ -814,7 +849,9 @@ export function POS() {
                             originalCurrency: item.original_currency,
                             originalUnitPrice: item.original_unit_price,
                             convertedUnitPrice: item.converted_unit_price,
-                            settlementCurrency: item.settlement_currency
+                            settlementCurrency: item.settlement_currency,
+                            negotiatedPrice: item.negotiated_price,
+                            inventorySnapshot: item.inventory_snapshot
                         })
                     ))
 
@@ -828,8 +865,13 @@ export function POS() {
                         }
                     }))
 
-                    // 4. Add to Sync Queue
-                    await addToOfflineMutations('sales', saleId, 'create', checkoutPayload, user.workspaceId)
+                    // 4. Add to Sync Queue (include verification fields)
+                    await addToOfflineMutations('sales', saleId, 'create', {
+                        ...checkoutPayload,
+                        system_verified: verificationResult.verified,
+                        system_review_status: verificationResult.status,
+                        system_review_reason: verificationResult.reason
+                    }, user.workspaceId)
 
                     setCart([])
                     toast({
@@ -1572,7 +1614,10 @@ interface MobileHeaderProps {
 
 const MobileHeader = ({ mobileView, setMobileView, totalItems, refreshExchangeRate, exchangeData, t, toast }: MobileHeaderProps) => {
     return (
-        <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border sticky top-0 z-50 lg:hidden">
+        <div className={cn(
+            "flex items-center justify-between px-4 py-3 bg-card border-b border-border sticky top-0 z-50 lg:hidden",
+            "pt-[calc(0.75rem+var(--safe-area-top))]"
+        )}>
             <button
                 className="p-2 -ms-2 rounded-xl hover:bg-secondary transition-colors"
                 onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-sidebar'))}
@@ -1931,7 +1976,10 @@ const MobileCart = ({ cart, removeFromCart, updateQuantity, features, totalAmoun
         </div>
 
         {/* Bottom Panel */}
-        <div className="bg-card border-t border-border rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-6 space-y-6 sticky bottom-0 z-40">
+        <div className={cn(
+            "bg-card border-t border-border rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-6 space-y-6 sticky bottom-0 z-40",
+            "pb-[calc(1.5rem+var(--safe-area-bottom))]"
+        )}>
             {/* Payment Method Toggle */}
             <div className="flex bg-muted p-1 rounded-2xl gap-1">
                 <button

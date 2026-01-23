@@ -122,6 +122,10 @@ export interface Sale extends BaseEntity {
     exchangeRates?: any[]
     origin: string
     payment_method?: 'cash' | 'fib' | 'qicard' | 'zaincash' | 'fastpay'
+    // System Verification (offline-first, immutable)
+    systemVerified: boolean
+    systemReviewStatus: 'approved' | 'flagged' | 'inconsistent'
+    systemReviewReason: string | null
 }
 
 export interface SaleItem {
@@ -138,6 +142,8 @@ export interface SaleItem {
     convertedUnitPrice: number
     settlementCurrency: CurrencyCode
     negotiatedPrice?: number
+    // Immutable inventory snapshot at checkout
+    inventorySnapshot: number
 }
 
 
@@ -167,6 +173,8 @@ export interface Workspace extends BaseEntity {
     allow_customers: boolean
     allow_orders: boolean
     allow_invoices: boolean
+    // Negotiated price limit (0-100 percentage)
+    max_discount_percent?: number
 }
 
 export interface OfflineMutation {

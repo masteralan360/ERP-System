@@ -475,6 +475,7 @@
         "details": "تفاصيل البيع",
         "id": "رقم البيع",
         "paymentMethod": "طريقة الدفع",
+        "flagged": "بيع مشبوه",
         "filters": {
             "cashier": "الكاشير",
             "allCashiers": "جميع الكاشير"

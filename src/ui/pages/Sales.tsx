@@ -603,6 +603,11 @@ export function Sales() {
                                                                 {t('sales.return.returnedStatus') || 'RETURNED'}
                                                             </span>
                                                         )}
+                                                        {sale.system_review_status === 'flagged' && (
+                                                            <span className="px-2 py-0.5 text-[9px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 rounded-full border border-orange-200 dark:border-orange-500/30 uppercase flex items-center gap-1">
+                                                                ⚠️ {t('sales.flagged') || 'FLAGGED'}
+                                                            </span>
+                                                        )}
                                                         {hasAnyReturn && !sale.is_returned && (
                                                             <span className="px-2 py-0.5 text-[9px] font-bold bg-orange-500/10 text-orange-600 rounded-full border border-orange-500/20 uppercase">
                                                                 -{totalReturnedQuantity} {t('sales.return.returnedLabel') || 'returned'}
@@ -707,6 +712,11 @@ export function Sales() {
                                                     {sale.is_returned && (
                                                         <span className="px-2 py-0.5 text-[10px] font-bold bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive-foreground rounded-full border border-destructive/30">
                                                             {(t('sales.return.returnedStatus') || 'RETURNED').toUpperCase()}
+                                                        </span>
+                                                    )}
+                                                    {sale.system_review_status === 'flagged' && (
+                                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 rounded-full border border-orange-200 dark:border-orange-500/30 flex items-center gap-1" title={sale.system_review_reason || ''}>
+                                                            ⚠️ {(t('sales.flagged') || 'FLAGGED').toUpperCase()}
                                                         </span>
                                                     )}
                                                     {hasAnyReturn && !sale.is_returned && (
