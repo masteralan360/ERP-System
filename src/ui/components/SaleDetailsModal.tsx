@@ -101,7 +101,20 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
                         </div>
                         <div>
                             <span className="text-muted-foreground">{t('sales.id')}:</span>
-                            <div className="font-mono text-xs text-muted-foreground">{sale.id}</div>
+                            <div className="flex items-center gap-2">
+                                {sale.sequence_id ? (
+                                    <>
+                                        <span className="font-mono text-xs font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20">
+                                            #{String(sale.sequence_id).padStart(5, '0')}
+                                        </span>
+                                        <span className="font-mono text-[10px] text-muted-foreground/50">
+                                            ({sale.id.slice(0, 8)})
+                                        </span>
+                                    </>
+                                ) : (
+                                    <div className="font-mono text-xs text-muted-foreground">{sale.id}</div>
+                                )}
+                            </div>
                         </div>
                         <div>
                             <span className="text-muted-foreground">{t('pos.paymentMethod') || 'Payment Method'}:</span>

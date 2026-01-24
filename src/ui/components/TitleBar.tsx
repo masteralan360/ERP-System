@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { Minus, Square, X, Sun, Moon, ArrowUpCircle } from 'lucide-react'
+import { Minus, Square, X, Sun, Moon, ArrowUpCircle, RotateCw } from 'lucide-react'
 import { useWorkspace } from '@/workspace/WorkspaceContext'
 import { useTheme } from '@/ui/components/theme-provider'
 import { useTranslation } from 'react-i18next'
@@ -113,6 +113,13 @@ export function TitleBar() {
                         <span className="text-xs font-medium">{t('updater.available')}</span>
                     </button>
                 )}
+                <button
+                    onClick={() => window.location.reload()}
+                    className="p-2 hover:bg-secondary rounded-md transition-colors text-muted-foreground hover:text-foreground mr-1"
+                    title={t('common.refresh') || "Refresh"}
+                >
+                    <RotateCw className="w-4 h-4" />
+                </button>
                 <button
                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                     className="p-2 hover:bg-secondary rounded-md transition-colors text-muted-foreground hover:text-foreground mr-1"

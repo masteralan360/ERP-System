@@ -56,7 +56,10 @@ export function useNetworkStatus() {
         window.addEventListener('online', handleOnline)
         window.addEventListener('offline', handleOffline)
 
-        // Periodic heartbeat every 30 seconds
+        // Immediate check when window regains focus (solves "offline after inactivity" issue)
+        window.addEventListener('focus', checkConnection)
+
+        // Periodic heartbeat - standard 30s
         heartbeatInterval = setInterval(checkConnection, 30000)
 
         // Initial check
@@ -65,6 +68,7 @@ export function useNetworkStatus() {
         return () => {
             window.removeEventListener('online', handleOnline)
             window.removeEventListener('offline', handleOffline)
+            window.removeEventListener('focus', checkConnection)
             clearInterval(heartbeatInterval)
         }
     }, [isOnline])

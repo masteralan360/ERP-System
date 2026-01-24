@@ -47,6 +47,8 @@ export interface Sale {
     return_reason?: string
     returned_at?: string
     returned_by?: string
+    // Sequential ID
+    sequence_id?: number
     // System Verification (offline-first, immutable)
     system_verified?: boolean
     system_review_status?: 'approved' | 'flagged' | 'inconsistent'

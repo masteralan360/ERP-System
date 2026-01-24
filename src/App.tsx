@@ -187,8 +187,24 @@ function App() {
         }
 
         if (isTauri && !isMobile()) {
-            console.log('[Tauri] Pre-loading all pages for snappy navigation...')
-            pages.forEach(load => load())
+            console.log('[Tauri] Initializing staggered page pre-loading...')
+            // Load pages sequentially with a small delay to avoid freezing the UI
+            // This prevents the "too slow" feeling on startup while still warming up the cache
+            const loadNext = (index: number) => {
+                if (index >= pages.length) {
+                    console.log('[Tauri] All pages pre-loaded.')
+                    return
+                }
+
+                // Load current page
+                pages[index]()
+
+                // Schedule next load
+                setTimeout(() => loadNext(index + 1), 200)
+            }
+
+            // Start loading after initial render is settling
+            setTimeout(() => loadNext(0), 1000)
         }
     }, [])
 

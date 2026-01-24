@@ -28,7 +28,9 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue
+    SelectValue,
+    PrintSelectionModal,
+    A4InvoiceTemplate
 } from '@/ui/components'
 import { SaleItem } from '@/types'
 import {
@@ -61,6 +63,9 @@ export function Sales() {
     const [showDeclineModal, setShowDeclineModal] = useState(false)
     const [nonReturnableProducts, setNonReturnableProducts] = useState<string[]>([])
     const [filteredReturnItems, setFilteredReturnItems] = useState<SaleItem[]>([])
+    const [printFormat, setPrintFormat] = useState<'receipt' | 'a4'>('receipt')
+    const [showPrintModal, setShowPrintModal] = useState(false)
+    const [saleToPrintSelection, setSaleToPrintSelection] = useState<Sale | null>(null)
     const printRef = useRef<HTMLDivElement>(null)
 
     const handlePrint = () => {
@@ -87,12 +92,12 @@ export function Sales() {
             doc.write(`
                 <html dir="${document.dir}">
                     <head>
-                        <title>Print Receipt</title>
+                        <title>Print ${printFormat === 'a4' ? 'Invoice' : 'Receipt'}</title>
                         ${styles}
                         <style>
                             @media print {
-                                @page { size: 80mm auto; margin: 0; }
-                                body { margin: 0; padding: 10px; }
+                                @page { size: ${printFormat === 'a4' ? 'A4' : '80mm auto'}; margin: 0; }
+                                body { margin: 0; padding: ${printFormat === 'a4' ? '0' : '10px'}; }
                                 html, body { height: auto; overflow: visible; }
                             }
                             body { 
@@ -135,7 +140,17 @@ export function Sales() {
     }
 
     const onPrintClick = (sale: Sale) => {
-        setPrintingSale(sale)
+        setSaleToPrintSelection(sale)
+        setShowPrintModal(true)
+    }
+
+    const handlePrintSelection = (format: 'receipt' | 'a4') => {
+        setPrintFormat(format)
+        setShowPrintModal(false)
+        if (saleToPrintSelection) {
+            setPrintingSale(saleToPrintSelection)
+            setSaleToPrintSelection(null)
+        }
     }
 
     useEffect(() => {
@@ -594,9 +609,20 @@ export function Sales() {
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-2">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider">
-                                                        {formatCompactDateTime(sale.created_at)}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider">
+                                                            {formatCompactDateTime(sale.created_at)}
+                                                        </span>
+                                                        {sale.sequence_id ? (
+                                                            <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-primary/10 text-primary rounded border border-primary/20">
+                                                                #{String(sale.sequence_id).padStart(5, '0')}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] text-muted-foreground/50 font-mono">
+                                                                #{sale.id.slice(0, 8)}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="flex flex-wrap gap-1.5">
                                                         {sale.is_returned && (
                                                             <span className="px-2 py-0.5 text-[9px] font-bold bg-destructive/10 text-destructive rounded-full border border-destructive/20 uppercase">
@@ -683,6 +709,7 @@ export function Sales() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[80px]">{t('sales.id') || '#'}</TableHead>
                                     <TableHead className="text-start">{t('sales.date') || 'Date'}</TableHead>
                                     <TableHead className="text-start">{t('sales.cashier') || 'Cashier'}</TableHead>
                                     <TableHead className="text-start">{t('sales.origin') || 'Origin'}</TableHead>
@@ -706,24 +733,35 @@ export function Sales() {
                                             key={sale.id}
                                             className={sale.is_returned ? 'bg-destructive/10 border-destructive/20' : hasAnyReturn ? 'bg-orange-500/10 border-orange-500/20 dark:bg-orange-500/5 dark:border-orange-500/10' : ''}
                                         >
+                                            <TableCell className="font-mono text-sm font-bold text-primary">
+                                                {sale.sequence_id ? (
+                                                    <span>#{String(sale.sequence_id).padStart(5, '0')}</span>
+                                                ) : (
+                                                    <span className="text-muted-foreground/40 text-xs">#{sale.id.slice(0, 4)}...</span>
+                                                )}
+                                            </TableCell>
                                             <TableCell className="text-start font-mono text-sm">
-                                                <div className="flex items-center gap-2">
-                                                    {formatDateTime(sale.created_at)}
-                                                    {sale.is_returned && (
-                                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive-foreground rounded-full border border-destructive/30">
-                                                            {(t('sales.return.returnedStatus') || 'RETURNED').toUpperCase()}
-                                                        </span>
-                                                    )}
-                                                    {sale.system_review_status === 'flagged' && (
-                                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 rounded-full border border-orange-200 dark:border-orange-500/30 flex items-center gap-1" title={sale.system_review_reason || ''}>
-                                                            ⚠️ {(t('sales.flagged') || 'FLAGGED').toUpperCase()}
-                                                        </span>
-                                                    )}
-                                                    {hasAnyReturn && !sale.is_returned && (
-                                                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30">
-                                                            -{totalReturnedQuantity} {t('sales.return.returnedLabel') || 'returned'}
-                                                        </div>
-                                                    )}
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-muted-foreground">
+                                                        {formatDateTime(sale.created_at)}
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        {sale.is_returned && (
+                                                            <span className="px-2 py-0.5 text-[10px] font-bold bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive-foreground rounded-full border border-destructive/30">
+                                                                {(t('sales.return.returnedStatus') || 'RETURNED').toUpperCase()}
+                                                            </span>
+                                                        )}
+                                                        {sale.system_review_status === 'flagged' && (
+                                                            <span className="px-2 py-0.5 text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 rounded-full border border-orange-200 dark:border-orange-500/30 flex items-center gap-1" title={sale.system_review_reason || ''}>
+                                                                ⚠️ {(t('sales.flagged') || 'FLAGGED').toUpperCase()}
+                                                            </span>
+                                                        )}
+                                                        {hasAnyReturn && !sale.is_returned && (
+                                                            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30">
+                                                                -{totalReturnedQuantity} {t('sales.return.returnedLabel') || 'returned'}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-start">
@@ -838,16 +876,30 @@ export function Sales() {
             />
 
             {/* Hidden Print Component - using opacity/position instead of display:none to ensure it renders for print */}
+            {/* Hidden Print Component - using opacity/position instead of display:none to ensure it renders for print */}
             <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
                 <div ref={printRef}>
                     {printingSale && (
-                        <SaleReceipt
-                            sale={printingSale}
-                            features={features}
-                        />
+                        printFormat === 'a4' ? (
+                            <A4InvoiceTemplate
+                                sale={printingSale}
+                                features={features}
+                            />
+                        ) : (
+                            <SaleReceipt
+                                sale={printingSale}
+                                features={features}
+                            />
+                        )
                     )}
                 </div>
             </div>
+
+            <PrintSelectionModal
+                isOpen={showPrintModal}
+                onClose={() => setShowPrintModal(false)}
+                onSelect={handlePrintSelection}
+            />
         </div>
     )
 }

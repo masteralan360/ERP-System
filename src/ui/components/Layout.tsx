@@ -26,13 +26,15 @@ import {
     TrendingUp,
     ChevronLeft,
     ChevronRight,
-    BarChart3
+    BarChart3,
+    RotateCw
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from './button'
 import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
 import { supabase } from '@/auth/supabase'
+import { isMobile } from '@/lib/platform'
 
 interface LayoutProps {
     children: ReactNode
@@ -332,6 +334,17 @@ export function Layout({ children }: LayoutProps) {
                         <ExchangeRateIndicator />
                         <div className="w-px h-4 bg-border mx-1" />
                         <SyncStatusIndicator />
+
+                        {/* Refresh Button - Only for non-Tauri or Mobile where TitleBar is absent */}
+                        {(!isTauri || isMobile()) && (
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="p-2 hover:bg-secondary rounded-full text-muted-foreground transition-colors"
+                                title="Refresh"
+                            >
+                                <RotateCw className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 </header>
 
