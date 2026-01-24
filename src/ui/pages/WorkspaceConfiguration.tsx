@@ -13,15 +13,18 @@ import {
     Button
 } from '@/ui/components'
 import {
-    Settings,
     CreditCard,
     Users,
     ShoppingCart,
     FileText,
     Loader2,
     Check,
-    ArrowRight
+    ArrowRight,
+    ImagePlus,
+    Package
 } from 'lucide-react'
+import { isTauri as isTauriCheck } from '@/lib/platform'
+import { platformService } from '@/services/platformService'
 
 interface FeatureToggle {
     key: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices'
@@ -36,13 +39,17 @@ export function WorkspaceConfiguration() {
     const [, navigate] = useLocation()
     const { t } = useTranslation()
 
-    // Redirect if already configured
+    const [isLoading, setIsLoading] = useState(false)
+    const [logoUrl, setLogoUrl] = useState('')
+    const isTauri = isTauriCheck()
+    const workspaceId = user?.workspaceId || ''
+
+    // Redirect if already configured - Moved after state to avoid early return issues
     if (!isWorkspaceLoading && currentFeatures.is_configured) {
         navigate('/')
         return null
     }
 
-    const [isLoading, setIsLoading] = useState(false)
     const [features, setFeatures] = useState({
         allow_pos: true,
         allow_customers: true,
@@ -81,6 +88,20 @@ export function WorkspaceConfiguration() {
         setFeatures(prev => ({ ...prev, [key]: !prev[key] }))
     }
 
+    const handleImageUpload = async () => {
+        if (!isTauri) return;
+        const targetPath = await platformService.pickAndSaveImage(workspaceId);
+        if (targetPath) {
+            setLogoUrl(targetPath);
+        }
+    }
+
+    const getDisplayImageUrl = (url?: string) => {
+        if (!url) return '';
+        if (url.startsWith('http')) return url;
+        return platformService.convertFileSrc(url);
+    }
+
     const handleSave = async () => {
         setIsLoading(true)
         try {
@@ -88,7 +109,8 @@ export function WorkspaceConfiguration() {
                 p_allow_pos: features.allow_pos,
                 p_allow_customers: features.allow_customers,
                 p_allow_orders: features.allow_orders,
-                p_allow_invoices: features.allow_invoices
+                p_allow_invoices: features.allow_invoices,
+                p_logo_url: logoUrl || null
             })
 
             if (error) throw error
@@ -111,34 +133,65 @@ export function WorkspaceConfiguration() {
             <Card className="w-full max-w-2xl shadow-xl border-border/50">
                 <CardHeader className="text-center pb-2">
                     <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <Settings className="w-8 h-8 text-primary" />
+                        <ImagePlus className="w-8 h-8 text-primary" />
                     </div>
                     <CardTitle className="text-2xl">
-                        {t('workspaceConfig.title') || 'Configure Your Workspace'}
+                        {t('workspaceConfig.title')}
                     </CardTitle>
                     <CardDescription className="text-base">
-                        {t('workspaceConfig.subtitle') || 'Select which features to enable for your workspace. You can change these settings later.'}
+                        {t('workspaceConfig.subtitle')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* Workspace Info */}
-                    <div className="bg-muted/30 rounded-lg p-4 text-center">
-                        <p className="text-sm text-muted-foreground">
-                            {t('workspaceConfig.workspaceName') || 'Workspace'}
-                        </p>
-                        <p className="font-semibold text-lg">{user?.workspaceName || 'My Workspace'}</p>
+                    {/* Workspace Info & Logo */}
+                    <div className="bg-muted/30 rounded-lg p-6 flex flex-col items-center gap-4">
+                        <div className="relative group">
+                            <div className="w-24 h-24 rounded-2xl bg-background border-2 border-dashed border-muted-foreground/30 flex items-center justify-center overflow-hidden transition-all group-hover:border-primary/50">
+                                {logoUrl ? (
+                                    <img
+                                        src={getDisplayImageUrl(logoUrl)}
+                                        alt="Workspace Logo"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <Package className="w-10 h-10 text-muted-foreground/30" />
+                                )}
+                            </div>
+                            {isTauri && (
+                                <button
+                                    onClick={handleImageUpload}
+                                    className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+                                    title={t('workspaceConfig.uploadLogo')}
+                                >
+                                    <ImagePlus className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="text-center">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                                {t('workspaceConfig.workspaceName')}
+                            </p>
+                            <p className="font-bold text-xl text-foreground">{user?.workspaceName || 'My Workspace'}</p>
+                            {isTauri && (
+                                <p className="text-[10px] text-muted-foreground mt-2 italic flex items-center justify-center gap-1">
+                                    <Check className="w-3 h-3 text-green-500" />
+                                    {t('workspaceConfig.logoNote')}
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     {/* Feature Toggles */}
                     <div className="space-y-3">
                         {featureToggles.map((feature) => {
                             const Icon = feature.icon
-                            const isEnabled = features[feature.key]
+                            const isEnabled = features[feature.key as keyof typeof features]
 
                             return (
                                 <button
                                     key={feature.key}
-                                    onClick={() => toggleFeature(feature.key)}
+                                    onClick={() => toggleFeature(feature.key as keyof typeof features)}
                                     className={`
                                         w-full p-4 rounded-xl border-2 transition-all duration-200 text-left
                                         flex items-center gap-4 group
@@ -175,7 +228,7 @@ export function WorkspaceConfiguration() {
                     {/* Info Note */}
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-blue-600 dark:text-blue-400">
                         <p>
-                            {t('workspaceConfig.note') || 'Only The Admin can modify these settings.'}
+                            {t('workspaceConfig.note')}
                         </p>
                     </div>
 
@@ -189,7 +242,7 @@ export function WorkspaceConfiguration() {
                             <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
                             <>
-                                {t('workspaceConfig.continue') || 'Continue to Dashboard'}
+                                {t('workspaceConfig.continue')}
                                 <ArrowRight className="w-5 h-5" />
                             </>
                         )}

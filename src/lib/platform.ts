@@ -2,7 +2,10 @@
  * Platform detection and abstraction for Tauri (Desktop) and Capacitor (Mobile/Android)
  */
 
-export const isTauri = () => !!(window as any).__TAURI__ || !!(window as any).__TAURI_METADATA__;
+export const isTauri = () =>
+    !!(window as any).__TAURI__ ||
+    !!(window as any).__TAURI_METADATA__ ||
+    !!(window as any).__TAURI_INTERNALS__;
 export const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 export const isDesktop = () => isTauri() && !isMobile();
 export const isWeb = () => !isTauri();

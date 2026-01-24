@@ -35,7 +35,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth'
 import { useWorkspace } from '@/workspace'
 import { useEffect } from 'react'
-import { isDesktop, isMobile } from '@/lib/platform'
+import { isTauri, isMobile } from '@/lib/platform'
 import { platformService } from '@/services/platformService'
 
 const UNITS = ['pcs', 'kg', 'liter', 'box', 'pack']
@@ -98,7 +98,7 @@ export function Products() {
     const [unsavedChangesType, setUnsavedChangesType] = useState<'product' | 'category' | null>(null)
 
     useEffect(() => {
-        setIsElectron(isDesktop());
+        setIsElectron(isTauri());
     }, [])
 
     const isProductDirty = () => {
@@ -679,7 +679,7 @@ export function Products() {
                                 {!isElectron && (
                                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-normal">
                                         <Info className="w-3 h-3" />
-                                        {t('products.form.electronOnly') || 'Upload only available in Desktop App'}
+                                        {t('products.form.tauriOnly') || 'Upload only available in Local App'}
                                     </div>
                                 )}
                             </Label>
@@ -730,8 +730,8 @@ export function Products() {
                                     </div>
                                     <p className="text-[11px] text-muted-foreground italic">
                                         {isElectron
-                                            ? (t('products.form.localPathDesc') || 'Image will be stored locally in your workstation.')
-                                            : (t('products.form.webUrlDesc') || 'Enter a public image URL or switch to desktop app for local upload.')}
+                                            ? (t('products.form.localPathDesc') || 'Image will be stored locally in your device.')
+                                            : (t('products.form.webUrlDesc') || 'Enter a public image URL or switch to the local app for uploading.')}
                                     </p>
                                 </div>
                             </div>

@@ -37,7 +37,7 @@ export function PrintSelectionModal({ isOpen, onClose, onSelect }: PrintSelectio
                         </div>
                         <div className="space-y-1">
                             <div className="font-bold">{t('sales.print.receipt') || 'Thermal Receipt'}</div>
-                            <div className="text-xs text-muted-foreground">80mm standard paper</div>
+                            <div className="text-xs text-muted-foreground">{t('sales.print.receiptdesc') || 'Detailed full-page document'}</div>
                         </div>
                     </Button>
 
@@ -51,7 +51,7 @@ export function PrintSelectionModal({ isOpen, onClose, onSelect }: PrintSelectio
                         </div>
                         <div className="space-y-1">
                             <div className="font-bold">{t('sales.print.a4') || 'A4 Invoice'}</div>
-                            <div className="text-xs text-muted-foreground">Detailed full-page document</div>
+                            <div className="text-xs text-muted-foreground">{t('sales.print.a4desc') || 'Detailed full-page document'}</div>
                         </div>
                     </Button>
                 </div>

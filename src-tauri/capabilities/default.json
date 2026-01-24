@@ -16,6 +16,10 @@
     "core:window:allow-close",
     "core:window:allow-start-dragging",
     "fs:default",
+    "fs:allow-mkdir",
+    "fs:allow-copy-file",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
     {
       "identifier": "http:default",
       "allow": [
@@ -32,6 +36,7 @@
     },
     "shell:allow-open",
     "dialog:default",
+    "dialog:allow-open",
     "dialog:allow-ask",
     "dialog:allow-message",
     "updater:default",

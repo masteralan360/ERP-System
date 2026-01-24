@@ -90,7 +90,6 @@ export const A4InvoiceTemplate = forwardRef<HTMLDivElement, A4InvoiceTemplatePro
                                     <p className="font-bold text-black mb-1">Sold By: </p>
                                     <p className="font-mono font-bold text-main text-lg">{sale.cashier_name?.slice(0, 8) || 'STAFF'}</p>
                                     <p className="text-xs mt-1">Shipped To: ________________</p>
-
                                     <p className="text-xs">Via: ______________________</p>
                                 </td>
                             </tr>
@@ -113,9 +112,16 @@ export const A4InvoiceTemplate = forwardRef<HTMLDivElement, A4InvoiceTemplatePro
                         </thead>
                         <tbody>
                             {items.map((item, idx) => {
-                                const unitPrice = item.converted_unit_price || item.unit_price || 0
-                                const total = unitPrice * item.quantity
-                                const discount = 0
+                                const finalUnitPrice = item.converted_unit_price || item.unit_price || 0
+                                const hasNegotiation = item.negotiated_price !== undefined && item.negotiated_price !== null && item.negotiated_price !== item.original_unit_price
+
+                                // Calculate Original and Discount in settlement currency
+                                // We use the ratio from the original product currency prices to derive the converted original price
+                                const discountRatio = hasNegotiation ? (item.negotiated_price! / item.original_unit_price) : 1
+                                const priceToShow = hasNegotiation ? (finalUnitPrice / discountRatio) : finalUnitPrice
+                                const discountAmount = priceToShow - finalUnitPrice
+
+                                const total = finalUnitPrice * item.quantity
 
                                 return (
                                     <tr key={idx} className="text-neutral-700">
@@ -123,10 +129,10 @@ export const A4InvoiceTemplate = forwardRef<HTMLDivElement, A4InvoiceTemplatePro
                                         <td className="border-b py-2 pl-2 font-bold">{item.product_name}</td>
                                         <td className="border-b py-2 pl-2 text-sm text-neutral-500 truncate max-w-[200px]">{item.product_sku || '-'}</td>
                                         <td className="border-b py-2 pl-2 text-right">
-                                            {formatCurrency(unitPrice, settlementCurrency, features.iqd_display_preference)}
+                                            {formatCurrency(priceToShow, settlementCurrency, features.iqd_display_preference)}
                                         </td>
                                         <td className="border-b py-2 pl-2 text-center text-neutral-400">
-                                            {discount > 0 ? formatCurrency(discount, settlementCurrency, features.iqd_display_preference) : '-'}
+                                            {discountAmount > 0 ? formatCurrency(discountAmount, settlementCurrency, features.iqd_display_preference) : '-'}
                                         </td>
                                         <td className="border-b py-2 pl-2 pr-3 text-right font-bold text-black">
                                             {formatCurrency(total, settlementCurrency, features.iqd_display_preference)}
