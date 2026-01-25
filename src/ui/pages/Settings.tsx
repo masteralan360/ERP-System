@@ -9,7 +9,7 @@ import type { IQDDisplayPreference } from '@/local-db/models'
 import { Settings as SettingsIcon, Database, Cloud, Trash2, RefreshCw, User, Copy, Check, CreditCard, Globe, Download, AlertCircle } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { useTheme } from '@/ui/components/theme-provider'
-import { Moon, Sun, Monitor, Unlock, Server } from 'lucide-react'
+import { Moon, Sun, Monitor, Unlock, Server, MessageSquare } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { getAppSettingSync, setAppSetting } from '@/local-db/settings'
 import { check } from '@tauri-apps/plugin-updater';
@@ -578,6 +578,35 @@ export function Settings() {
                 </TabsContent>
 
                 <TabsContent value="advanced" className="space-y-6 mt-0">
+                    {/* WhatsApp Integration Setting */}
+                    {user?.role === 'admin' && (
+                        <Card className="border-primary/20 bg-primary/5">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <MessageSquare className="w-5 h-5 text-primary" />
+                                    WhatsApp Integration
+                                </CardTitle>
+                                <CardDescription>
+                                    Enable WhatsApp chat for Admins and Staff. Chat history is stored locally on each device.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-base text-primary">Enable WhatsApp Feature</Label>
+                                        <p className="text-sm text-muted-foreground max-w-md">
+                                            Allow text-only communication with customers. Staff will inherit this setting.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={features.allow_whatsapp}
+                                        onCheckedChange={(val: boolean) => updateSettings({ allow_whatsapp: val })}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* User Info */}
                     <Card>
                         <CardHeader>

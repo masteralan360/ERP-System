@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
     allowedRoles?: UserRole[]
     redirectTo?: string
     allowKicked?: boolean
-    requiredFeature?: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices'
+    requiredFeature?: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices' | 'allow_whatsapp'
 }
 
 export function ProtectedRoute({

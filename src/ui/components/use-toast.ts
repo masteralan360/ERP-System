@@ -71,13 +71,18 @@ const addToRemoveQueue = (toastId: string) => {
     toastTimeouts.set(toastId, timeout)
 }
 
+import { whatsappManager } from '@/lib/whatsappWebviewManager'
+
 export const reducer = (state: State, action: Action): State => {
     switch (action.type) {
-        case "ADD_TOAST":
+        case "ADD_TOAST": {
+            // Shrink webview to make room for toast notification
+            whatsappManager.setNotificationSpace(100);
             return {
                 ...state,
                 toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
             }
+        }
 
         case "UPDATE_TOAST":
             return {
@@ -112,7 +117,16 @@ export const reducer = (state: State, action: Action): State => {
                 ),
             }
         }
-        case "REMOVE_TOAST":
+        case "REMOVE_TOAST": {
+            // Restore webview to full height when all toasts are gone
+            const remainingToasts = action.toastId === undefined
+                ? []
+                : state.toasts.filter((t) => t.id !== action.toastId);
+
+            if (remainingToasts.length === 0) {
+                whatsappManager.clearNotificationSpace();
+            }
+
             if (action.toastId === undefined) {
                 return {
                     ...state,
@@ -121,8 +135,9 @@ export const reducer = (state: State, action: Action): State => {
             }
             return {
                 ...state,
-                toasts: state.toasts.filter((t) => t.id !== action.toastId),
+                toasts: remainingToasts,
             }
+        }
     }
 }
 

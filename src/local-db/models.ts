@@ -175,6 +175,7 @@ export interface Workspace extends BaseEntity {
     allow_customers: boolean
     allow_orders: boolean
     allow_invoices: boolean
+    allow_whatsapp?: boolean
     logo_url?: string | null
     syncStatus: SyncStatus
     // Negotiated price limit (0-100 percentage)
@@ -191,6 +192,24 @@ export interface OfflineMutation {
     createdAt: string
     status: MutationStatus
     error?: string
+}
+
+export interface WhatsAppConversation {
+    id: string
+    customer_phone: string
+    created_at: number
+}
+
+export interface WhatsAppMessage {
+    id: string
+    conversation_id: string
+    direction: 'in' | 'out'
+    body: string
+    timestamp: number
+    status: 'sent' | 'received' | 'failed'
+    media_url?: string
+    media_type?: 'image' | 'video' | 'audio' | 'document' | 'voice'
+    thumbnail?: string
 }
 
 export interface AppSetting {

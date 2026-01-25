@@ -20,6 +20,7 @@ export interface WorkspaceFeatures {
     logo_url: string | null
     // Negotiated price limit (0-100 percentage, default 100 = no limit)
     max_discount_percent: number
+    allow_whatsapp: boolean
 }
 
 export interface UpdateInfo {
@@ -35,9 +36,9 @@ interface WorkspaceContextType {
     pendingUpdate: UpdateInfo | null
     setPendingUpdate: (update: UpdateInfo | null) => void
     isFullscreen: boolean
-    hasFeature: (feature: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices') => boolean
+    hasFeature: (feature: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices' | 'allow_whatsapp') => boolean
     refreshFeatures: () => Promise<void>
-    updateSettings: (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled' | 'try_conversion_enabled'>>) => Promise<void>
+    updateSettings: (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled' | 'try_conversion_enabled' | 'allow_whatsapp'>>) => Promise<void>
 }
 
 const defaultFeatures: WorkspaceFeatures = {
@@ -52,7 +53,8 @@ const defaultFeatures: WorkspaceFeatures = {
     try_conversion_enabled: false,
     locked_workspace: false,
     logo_url: null,
-    max_discount_percent: 100
+    max_discount_percent: 100,
+    allow_whatsapp: false
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined)
@@ -127,7 +129,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                         try_conversion_enabled: (localWorkspace as any).try_conversion_enabled ?? false,
                         locked_workspace: (localWorkspace as any).locked_workspace ?? false,
                         logo_url: (localWorkspace as any).logo_url ?? null,
-                        max_discount_percent: (localWorkspace as any).max_discount_percent ?? 100
+                        max_discount_percent: (localWorkspace as any).max_discount_percent ?? 100,
+                        allow_whatsapp: (localWorkspace as any).allow_whatsapp ?? false
                     })
                 } else {
                     setFeatures(defaultFeatures)
@@ -146,7 +149,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                     try_conversion_enabled: featureData.try_conversion_enabled ?? false,
                     locked_workspace: featureData.locked_workspace ?? false,
                     logo_url: featureData.logo_url ?? null,
-                    max_discount_percent: featureData.max_discount_percent ?? 100
+                    max_discount_percent: featureData.max_discount_percent ?? 100,
+                    allow_whatsapp: featureData.allow_whatsapp ?? false
                 }
                 setFeatures(fetchedFeatures)
                 setWorkspaceName(featureData.workspace_name || 'My Workspace')
@@ -166,6 +170,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                     allow_customers: fetchedFeatures.allow_customers,
                     allow_orders: fetchedFeatures.allow_orders,
                     allow_invoices: fetchedFeatures.allow_invoices,
+                    allow_whatsapp: fetchedFeatures.allow_whatsapp,
                     logo_url: fetchedFeatures.logo_url,
                     syncStatus: 'synced',
                     lastSyncedAt: new Date().toISOString(),
@@ -194,7 +199,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         }
     }, [isAuthenticated, user?.workspaceId, authLoading])
 
-    const hasFeature = (feature: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices'): boolean => {
+    const hasFeature = (feature: 'allow_pos' | 'allow_customers' | 'allow_orders' | 'allow_invoices' | 'allow_whatsapp'): boolean => {
         return features[feature] === true
     }
 
@@ -203,7 +208,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         await fetchFeatures()
     }
 
-    const updateSettings = async (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled' | 'try_conversion_enabled'>>) => {
+    const updateSettings = async (settings: Partial<Pick<WorkspaceFeatures, 'default_currency' | 'iqd_display_preference' | 'eur_conversion_enabled' | 'try_conversion_enabled' | 'allow_whatsapp'>>) => {
         const workspaceId = user?.workspaceId
         if (!workspaceId) return
 

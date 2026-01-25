@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Product, Category, Customer, Order, Invoice, User, SyncQueueItem, Sale, SaleItem, OfflineMutation, Workspace, AppSetting } from './models'
+import type { Product, Category, Customer, Order, Invoice, User, SyncQueueItem, Sale, SaleItem, OfflineMutation, Workspace, AppSetting, WhatsAppConversation, WhatsAppMessage } from './models'
 
 // ERP Database using Dexie.js for IndexedDB
 export class ERPDatabase extends Dexie {
@@ -15,6 +15,8 @@ export class ERPDatabase extends Dexie {
     syncQueue!: EntityTable<SyncQueueItem, 'id'>
     offline_mutations!: EntityTable<OfflineMutation, 'id'>
     app_settings!: EntityTable<AppSetting, 'key'>
+    whatsapp_conversations!: EntityTable<WhatsAppConversation, 'id'>
+    whatsapp_messages!: EntityTable<WhatsAppMessage, 'id'>
 
     constructor() {
         super('ERPDatabase')
@@ -32,6 +34,11 @@ export class ERPDatabase extends Dexie {
             syncQueue: 'id, entityType, entityId, operation, timestamp',
             offline_mutations: 'id, workspaceId, entityType, entityId, status, createdAt, [entityType+entityId+status]',
             app_settings: 'key'
+        })
+
+        this.version(11).stores({
+            whatsapp_conversations: 'id, customer_phone, created_at',
+            whatsapp_messages: 'id, conversation_id, timestamp'
         })
     }
 }

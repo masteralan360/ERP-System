@@ -27,7 +27,8 @@ import {
     ChevronLeft,
     ChevronRight,
     BarChart3,
-    RotateCw
+    RotateCw,
+    MessageSquare
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from './button'
@@ -105,6 +106,11 @@ export function Layout({ children }: LayoutProps) {
         ...(user?.role === 'admin' ? [
             { name: t('nav.revenue') || 'Net Revenue', href: '/revenue', icon: TrendingUp },
             { name: t('nav.performance') || 'Team Performance', href: '/performance', icon: BarChart3 }
+        ] : []),
+        // WhatsApp - requires feature flag AND role
+        ...((user?.role === 'admin' || user?.role === 'staff') && hasFeature('allow_whatsapp') ? [
+            { name: 'WhatsApp', href: '/whatsapp', icon: MessageSquare },
+            { name: 'WhatsApp Web', href: '/whatsapp-web', icon: MessageSquare }
         ] : []),
         // Products - always visible
         { name: t('nav.products'), href: '/products', icon: Package },

@@ -15,6 +15,8 @@
     "core:window:allow-set-fullscreen",
     "core:window:allow-close",
     "core:window:allow-start-dragging",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
     "fs:default",
     {
       "identifier": "fs:allow-mkdir",
@@ -64,11 +66,40 @@
       ]
     },
     "shell:allow-open",
+    "shell:allow-stdin-write",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-ask",
     "dialog:allow-message",
     "updater:default",
-    "process:default"
+    "process:default",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-create-webview-window",
+    "core:webview:allow-webview-close",
+    "core:webview:allow-set-webview-size",
+    "core:webview:allow-set-webview-position",
+    "core:webview:allow-set-webview-focus",
+    "core:webview:allow-webview-show",
+    "core:webview:allow-webview-hide",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "node",
+          "cmd": "node",
+          "args": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "node",
+          "cmd": "node",
+          "args": true
+        }
+      ]
+    }
   ]
 }
