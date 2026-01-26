@@ -194,23 +194,6 @@ export interface OfflineMutation {
     error?: string
 }
 
-export interface WhatsAppConversation {
-    id: string
-    customer_phone: string
-    created_at: number
-}
-
-export interface WhatsAppMessage {
-    id: string
-    conversation_id: string
-    direction: 'in' | 'out'
-    body: string
-    timestamp: number
-    status: 'sent' | 'received' | 'failed'
-    media_url?: string
-    media_type?: 'image' | 'video' | 'audio' | 'document' | 'voice'
-    thumbnail?: string
-}
 
 export interface AppSetting {
     key: string

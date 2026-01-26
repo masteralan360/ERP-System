@@ -110,8 +110,7 @@ export function Layout({ children }: LayoutProps) {
         ] : []),
         // WhatsApp - requires feature flag AND role
         ...((user?.role === 'admin' || user?.role === 'staff') && hasFeature('allow_whatsapp') ? [
-            { name: 'WhatsApp', href: '/whatsapp', icon: MessageSquare },
-            { name: 'WhatsApp Web', href: '/whatsapp-web', icon: MessageSquare }
+            { name: 'WhatsApp', href: '/whatsapp', icon: MessageSquare }
         ] : []),
         // Products - always visible
         { name: t('nav.products'), href: '/products', icon: Package },

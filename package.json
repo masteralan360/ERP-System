@@ -1,7 +1,7 @@
 {
   "name": "erp-system",
   "private": true,
-  "version": "1.3.8",
+  "version": "1.3.9",
   "main": "electron/main.cjs",
   "type": "module",
   "repository": {
@@ -40,8 +40,7 @@
     "tauri:build": "tauri build",
     "android:dev": "tauri android dev",
     "android:build": "tauri android build --debug",
-    "android:build:release": "tauri android build",
-    "build:whatsapp": "node scripts/build-whatsapp-bridge.js"
+    "android:build:release": "tauri android build"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.2",

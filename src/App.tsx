@@ -29,8 +29,7 @@ const WorkspaceConfiguration = lazy(() => import('@/ui/pages/WorkspaceConfigurat
 const LockedWorkspace = lazy(() => import('@/ui/pages/LockedWorkspace').then(m => ({ default: m.LockedWorkspace })))
 const CurrencyConverter = lazy(() => import('@/ui/pages/CurrencyConverter').then(m => ({ default: m.CurrencyConverter })))
 const ConnectionConfiguration = lazy(() => import('@/ui/pages/ConnectionConfiguration').then(m => ({ default: m.ConnectionConfiguration })))
-const WhatsApp = lazy(() => import('@/ui/pages/WhatsApp').then(m => ({ default: m.default })))
-const WhatsAppWeb = lazy(() => import('@/ui/pages/WhatsAppWeb').then(m => ({ default: m.default })))
+const WhatsApp = lazy(() => import('@/ui/pages/WhatsAppWeb').then(m => ({ default: m.default })))
 
 // @ts-ignore
 const isTauri = !!window.__TAURI_INTERNALS__
@@ -50,7 +49,6 @@ const pages = [
     () => import('@/ui/pages/Members'),
     () => import('@/ui/pages/WorkspaceConfiguration'),
     () => import('@/ui/pages/CurrencyConverter'),
-    () => import('@/ui/pages/WhatsApp'),
     () => import('@/ui/pages/WhatsAppWeb'),
 ]
 
@@ -283,13 +281,6 @@ function App() {
                                         <ProtectedRoute allowedRoles={['admin', 'staff']} requiredFeature="allow_whatsapp">
                                             <Layout>
                                                 <WhatsApp />
-                                            </Layout>
-                                        </ProtectedRoute>
-                                    </Route>
-                                    <Route path="/whatsapp-web">
-                                        <ProtectedRoute allowedRoles={['admin', 'staff']} requiredFeature="allow_whatsapp">
-                                            <Layout>
-                                                <WhatsAppWeb />
                                             </Layout>
                                         </ProtectedRoute>
                                     </Route>
