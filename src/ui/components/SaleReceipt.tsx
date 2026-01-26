@@ -3,6 +3,8 @@ import { forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sale } from '@/types'
 import { formatCurrency, formatDateTime, formatSnapshotTime } from '@/lib/utils'
+import { platformService } from '@/services/platformService'
+import { useWorkspace } from '@/workspace'
 
 interface SaleReceiptProps {
     sale: Sale
@@ -12,6 +14,7 @@ interface SaleReceiptProps {
 export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
     ({ sale, features }, ref) => {
         const { t } = useTranslation()
+        const { workspaceName } = useWorkspace()
 
         const formatReceiptPrice = (amount: number, currency: string) => {
             const code = currency.toLowerCase()
@@ -45,7 +48,18 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
             <div ref={ref} className="p-8 bg-white text-black print:p-0 print:w-[80mm] print:text-sm">
 
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold uppercase tracking-widest mb-4">ERP System</h1>
+                    {features.logo_url && (
+                        <div className="flex justify-center mb-4">
+                            <img
+                                src={features.logo_url.startsWith('http') ? features.logo_url : platformService.convertFileSrc(features.logo_url)}
+                                alt="Workspace Logo"
+                                className="h-16 w-auto object-contain"
+                            />
+                        </div>
+                    )}
+                    <h1 className="text-2xl font-bold uppercase tracking-widest mb-4">
+                        {workspaceName || 'ERP System'}
+                    </h1>
                     <div className="flex justify-between items-start text-xs text-gray-600 mb-4 border-b border-gray-200 pb-4">
                         <div className="text-start space-y-1">
                             <div>

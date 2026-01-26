@@ -7,12 +7,14 @@ import { useWorkspace } from '@/workspace'
 import { Coins } from 'lucide-react'
 import type { IQDDisplayPreference } from '@/local-db/models'
 import { Settings as SettingsIcon, Database, Cloud, Trash2, RefreshCw, User, Copy, Check, CreditCard, Globe, Download, AlertCircle } from 'lucide-react'
-import { formatDateTime } from '@/lib/utils'
+import { formatDateTime, cn } from '@/lib/utils'
 import { useTheme } from '@/ui/components/theme-provider'
 import { Moon, Sun, Monitor, Unlock, Server, MessageSquare } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { getAppSettingSync, setAppSetting } from '@/local-db/settings'
 import { check } from '@tauri-apps/plugin-updater';
+import { platformService } from '@/services/platformService'
+import { Image as ImageIcon } from 'lucide-react'
 
 export function Settings() {
     const { user, signOut, isSupabaseConfigured } = useAuth()
@@ -185,6 +187,20 @@ export function Settings() {
         }
     }
 
+    const handleLogoUpload = async () => {
+        if (!user?.workspaceId) return
+        const targetPath = await platformService.pickAndSaveImage(user.workspaceId, 'workspace-logos')
+        if (targetPath) {
+            await updateSettings({ logo_url: targetPath })
+        }
+    }
+
+    const getDisplayLogoUrl = (url?: string | null) => {
+        if (!url) return ''
+        if (url.startsWith('http')) return url
+        return platformService.convertFileSrc(url)
+    }
+
     return (
         <div className="space-y-6 max-w-3xl">
             {/* Header */}
@@ -197,8 +213,14 @@ export function Settings() {
             </div>
 
             <Tabs defaultValue="general" className="w-full space-y-6">
-                <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                <TabsList className={cn(
+                    "grid w-full max-w-[500px]",
+                    (user?.role === 'admin' || user?.role === 'staff') ? "grid-cols-3" : "grid-cols-2"
+                )}>
                     <TabsTrigger value="general">{t('settings.tabs.general') || 'General'}</TabsTrigger>
+                    {(user?.role === 'admin' || user?.role === 'staff') && (
+                        <TabsTrigger value="profile">{t('settings.tabs.profile') || 'Profile Settings'}</TabsTrigger>
+                    )}
                     <TabsTrigger value="advanced">{t('settings.tabs.advanced') || 'Advanced'}</TabsTrigger>
                 </TabsList>
 
@@ -575,6 +597,94 @@ export function Settings() {
                         </CardContent>
                     </Card>
 
+                </TabsContent>
+
+                <TabsContent value="profile" className="space-y-6 mt-0">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <User className="w-5 h-5" />
+                                {t('settings.profile.title') || 'Profile Settings'}
+                            </CardTitle>
+                            <CardDescription>
+                                {t('settings.profile.desc') || 'Manage your personal and workspace profile information.'}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* User Profile Section (Read-only for now as per POS pattern) */}
+                            <div className="space-y-4">
+                                <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">User Information</Label>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Store Employee</Label>
+                                        <p className="font-medium text-lg">{user?.name}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Email Address</Label>
+                                        <p className="font-medium text-lg">{user?.email}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Account Role</Label>
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest",
+                                                user?.role === 'admin' ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                                            )}>
+                                                {user?.role}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Workspace Logo Section (Admin Only) */}
+                            {user?.role === 'admin' && (
+                                <div className="pt-6 border-t border-border/50 space-y-4">
+                                    <div className="flex flex-col gap-1">
+                                        <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Workspace Branding</Label>
+                                        <p className="text-sm text-muted-foreground">This logo will be displayed on the dashboard and printed receipts.</p>
+                                    </div>
+
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-24 h-24 rounded-2xl bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden relative group">
+                                            {features.logo_url ? (
+                                                <img
+                                                    src={getDisplayLogoUrl(features.logo_url)}
+                                                    alt="Workspace Logo"
+                                                    className="w-full h-full object-contain p-2"
+                                                />
+                                            ) : (
+                                                <ImageIcon className="w-8 h-8 opacity-20" />
+                                            )}
+                                            <div
+                                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                                                onClick={handleLogoUpload}
+                                            >
+                                                <RefreshCw className="w-5 h-5 text-white" />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-2">
+                                            <Button variant="outline" size="sm" onClick={handleLogoUpload} className="gap-2">
+                                                <ImageIcon className="w-4 h-4" />
+                                                {features.logo_url ? 'Change Logo' : 'Upload Logo'}
+                                            </Button>
+                                            {features.logo_url && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => updateSettings({ logo_url: null })}
+                                                >
+                                                    Remove Logo
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </TabsContent>
 
                 <TabsContent value="advanced" className="space-y-6 mt-0">

@@ -332,7 +332,12 @@
         },
         "tabs": {
             "general": "General Settings",
+            "profile": "Profile Settings",
             "advanced": "Advanced Settings"
+        },
+        "profile": {
+            "title": "Profile Settings",
+            "desc": "Manage your personal and workspace profile information."
         },
         "appearance": "Appearance",
         "appearanceDesc": "Customize the look and feel of the application",

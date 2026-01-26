@@ -6,6 +6,7 @@ import { useWorkspace } from '@/workspace'
 import { SyncStatusIndicator } from './SyncStatusIndicator'
 import { ExchangeRateIndicator } from './ExchangeRateIndicator'
 import { GlobalSearch } from './GlobalSearch'
+import { platformService } from '@/services/platformService'
 
 import {
     LayoutDashboard,
@@ -44,7 +45,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
     const [location] = useLocation()
     const { user, signOut } = useAuth()
-    const { hasFeature, workspaceName, isFullscreen } = useWorkspace()
+    const { hasFeature, workspaceName, isFullscreen, features } = useWorkspace()
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
     const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -165,7 +166,14 @@ export function Layout({ children }: LayoutProps) {
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
                     <div className="p-2 bg-primary/10 rounded-xl">
-                        {!logoError ? (
+                        {features.logo_url ? (
+                            <img
+                                src={features.logo_url.startsWith('http') ? features.logo_url : platformService.convertFileSrc(features.logo_url)}
+                                alt="Workspace Logo"
+                                className="w-8 h-8 object-contain"
+                                onError={() => setLogoError(true)}
+                            />
+                        ) : !logoError ? (
                             <img
                                 src="./logo.png"
                                 alt="Logo"

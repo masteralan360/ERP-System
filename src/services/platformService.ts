@@ -89,7 +89,7 @@ class PlatformService implements PlatformAPI {
             window.location.reload();
         }
     }
-    async pickAndSaveImage(workspaceId: string): Promise<string | null> {
+    async pickAndSaveImage(workspaceId: string, subDir: string = 'product-images'): Promise<string | null> {
         if (isTauri()) {
             try {
                 const { open } = await import('@tauri-apps/plugin-dialog');
@@ -104,7 +104,7 @@ class PlatformService implements PlatformAPI {
                 if (selected && typeof selected === 'string') {
                     const ext = selected.split('.').pop();
                     const fileName = `${Date.now()}.${ext}`;
-                    const relativeDir = `product-images/${workspaceId}`;
+                    const relativeDir = `${subDir}/${workspaceId}`;
 
                     await mkdir(relativeDir, { baseDir: BaseDirectory.AppData, recursive: true });
 

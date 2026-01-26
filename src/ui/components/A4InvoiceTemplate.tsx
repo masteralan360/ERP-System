@@ -1,6 +1,7 @@
 import { forwardRef } from 'react'
 import { Sale } from '@/types'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
+import { platformService } from '@/services/platformService'
 
 interface A4InvoiceTemplateProps {
     sale: Sale
@@ -46,8 +47,18 @@ export const A4InvoiceTemplate = forwardRef<HTMLDivElement, A4InvoiceTemplatePro
                         <tbody>
                             <tr>
                                 <td className="w-1/2 align-top">
-                                    <div className="h-12 flex items-center bg-gray-100 border border-gray-200 justify-center w-48 text-gray-400 font-bold tracking-wider uppercase">
-                                        LOGO
+                                    <div className="h-16 flex items-center justify-start w-48">
+                                        {features.logo_url ? (
+                                            <img
+                                                src={features.logo_url.startsWith('http') ? features.logo_url : platformService.convertFileSrc(features.logo_url)}
+                                                alt="Workspace Logo"
+                                                className="max-h-16 max-w-full object-contain"
+                                            />
+                                        ) : (
+                                            <div className="h-12 flex items-center bg-gray-100 border border-gray-200 justify-center w-48 text-gray-400 font-bold tracking-wider uppercase">
+                                                LOGO
+                                            </div>
+                                        )}
                                     </div>
                                 </td>
                                 <td className="w-1/2 align-top text-right">

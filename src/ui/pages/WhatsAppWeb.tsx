@@ -5,7 +5,6 @@ import { Loader2 } from 'lucide-react'
 export default function WhatsAppWeb() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [status, setStatus] = useState('Loading...');
-    const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
         let isUnmounted = false;
@@ -26,7 +25,6 @@ export default function WhatsAppWeb() {
                 // Show the webview (it may have been hidden)
                 await whatsappManager.show();
                 setStatus('');
-                setIsReady(true);
             } else if (!isUnmounted) {
                 setStatus('Failed to load');
             }
