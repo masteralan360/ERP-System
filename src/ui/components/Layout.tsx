@@ -37,7 +37,7 @@ import { Button } from './button'
 import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
 import { supabase } from '@/auth/supabase'
-import { isMobile } from '@/lib/platform'
+import { isMobile, isDesktop } from '@/lib/platform'
 
 interface LayoutProps {
     children: ReactNode
@@ -134,8 +134,8 @@ export function Layout({ children }: LayoutProps) {
             { name: t('nav.revenue') || 'Net Revenue', href: '/revenue', icon: TrendingUp },
             { name: t('nav.performance') || 'Team Performance', href: '/performance', icon: BarChart3 }
         ] : []),
-        // WhatsApp - requires feature flag AND role
-        ...((user?.role === 'admin' || user?.role === 'staff') && hasFeature('allow_whatsapp') ? [
+        // WhatsApp - requires feature flag AND role AND desktop platform
+        ...((user?.role === 'admin' || user?.role === 'staff') && hasFeature('allow_whatsapp') && isDesktop() ? [
             { name: 'WhatsApp', href: '/whatsapp', icon: MessageSquare }
         ] : []),
         // Products - always visible
