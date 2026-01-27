@@ -37,14 +37,8 @@ export function Register() {
                 workspaceCode: role !== 'admin' ? workspaceCode : undefined
             })
             if (error) {
-                // ... same error logic
-                // If it's a passkey error from the trigger, it might be genericized by Supabase
-                // or contain the custom message. We map both to our localized key.
-                if (error.message.includes('Invalid Access Code') || error.message.includes('Database error saving new user')) {
-                    setError(t('auth.invalidPasskey'))
-                } else {
-                    setError(error.message)
-                }
+                // Show real error message from database triggers
+                setError(error.message)
             } else {
                 if (role === 'admin') {
                     setLocation('/workspace-configuration')

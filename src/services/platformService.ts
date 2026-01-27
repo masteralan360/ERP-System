@@ -12,9 +12,52 @@ class PlatformService implements PlatformAPI {
                 const { appDataDir } = await import('@tauri-apps/api/path');
                 this.appDataPath = await appDataDir();
                 console.log('[PlatformService] Initialized AppData path:', this.appDataPath);
+
+                // On mobile, proactively request basic permissions if needed
+                if (isMobile()) {
+                    await this.requestMobilePermissions();
+                }
             } catch (e) {
                 console.error('[PlatformService] Failed to get AppData path:', e);
             }
+        }
+    }
+
+    /**
+     * Request essential mobile permissions for Tauri plugins
+     */
+    private async requestMobilePermissions() {
+        if (!isMobile()) return;
+
+        try {
+            const { invoke } = await import('@tauri-apps/api/core');
+
+            // Check and request permissions for dialog and fs plugins
+            // Note: identifiers may vary by plugin, but these are standard for v2 mobile plugins
+
+            const plugins = ['dialog', 'fs'];
+
+            for (const plugin of plugins) {
+                try {
+                    const state = await invoke<any>(`plugin:${plugin}|checkPermissions`);
+                    console.log(`[PlatformService] Permission state for ${plugin}:`, state);
+
+                    // On Android, the keys are usually group names like 'mediaLibrary', 'storage', etc.
+                    // We try to request anything that says 'prompt'
+                    const toRequest = Object.entries(state)
+                        .filter(([_, val]) => val === 'prompt' || val === 'prompt-with-rationale')
+                        .map(([key, _]) => key);
+
+                    if (toRequest.length > 0) {
+                        console.log(`[PlatformService] Requesting permissions for ${plugin}:`, toRequest);
+                        await invoke(`plugin:${plugin}|requestPermissions`, { permissions: toRequest });
+                    }
+                } catch (e) {
+                    console.warn(`[PlatformService] Could not check permissions for ${plugin}:`, e);
+                }
+            }
+        } catch (e) {
+            console.error('[PlatformService] Error in requestMobilePermissions:', e);
         }
     }
 
@@ -45,9 +88,15 @@ class PlatformService implements PlatformAPI {
                 // 3. Fallback for older patterns / direct construction
                 if ((window as any).__TAURI_INTERNALS__) {
                     const normalizedPath = finalPath.replace(/\\/g, '/');
+                    const cleanPath = normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath;
+
+                    // On Mobile (Android), it usually expects asset://localhost/ or asset://
+                    if (isMobile()) {
+                        return `asset://localhost/${cleanPath}`;
+                    }
+
                     // In v2 on Windows, the protocol is typically https://asset.localhost/
-                    const assetUrl = `https://asset.localhost/${normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath}`;
-                    return assetUrl;
+                    return `https://asset.localhost/${cleanPath}`;
                 }
             } catch (error) {
                 console.error('Error converting file src:', error);
@@ -120,6 +169,11 @@ class PlatformService implements PlatformAPI {
     async pickAndSaveImage(workspaceId: string, subDir: string = 'product-images'): Promise<string | null> {
         if (isTauri()) {
             try {
+                // On mobile, ensure we have permissions before opening dialog
+                if (isMobile()) {
+                    await this.requestMobilePermissions();
+                }
+
                 const { open } = await import('@tauri-apps/plugin-dialog');
                 const { mkdir, copyFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
 
@@ -133,9 +187,9 @@ class PlatformService implements PlatformAPI {
                     const fileName = `${Date.now()}.${ext}`;
                     const relativeDir = `${subDir}/${workspaceId}`;
 
-                    await mkdir(relativeDir, { baseDir: BaseDirectory.AppData, recursive: true });
+                    await mkdir(relativeDir.replace(/\\/g, '/'), { baseDir: BaseDirectory.AppData, recursive: true });
 
-                    const relativeDest = `${relativeDir}/${fileName}`;
+                    const relativeDest = `${relativeDir}/${fileName}`.replace(/\\/g, '/');
                     await copyFile(selected, relativeDest, { toPathBaseDir: BaseDirectory.AppData });
 
                     // Return relative path (e.g. product-images/uuid/123.jpg)
@@ -158,23 +212,30 @@ class PlatformService implements PlatformAPI {
                 const { mkdir, writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
                 const { dirname } = await import('@tauri-apps/api/path');
 
-                let relativeDest = filePath;
+                // Normalize the path early
+                const normalizedPath = filePath.replace(/\\/g, '/');
+                let relativeDest = normalizedPath;
 
                 // If filePath is just a filename (no slashes), use the default structure
-                if (!filePath.includes('/') && !filePath.includes('\\')) {
-                    relativeDest = `${defaultSubDir}/${workspaceId}/${filePath}`;
+                if (!normalizedPath.includes('/')) {
+                    relativeDest = `${defaultSubDir}/${workspaceId}/${normalizedPath}`;
                 }
 
                 // Get directory part from the final path
                 const dir = await dirname(relativeDest);
+                const cleanDir = dir.replace(/\\/g, '/');
+
+                console.log('[PlatformService] Target directory:', cleanDir);
 
                 // Ensure directory exists in AppData
-                await mkdir(dir, { baseDir: BaseDirectory.AppData, recursive: true });
+                await mkdir(cleanDir, { baseDir: BaseDirectory.AppData, recursive: true });
+                console.log('[PlatformService] Directory ready:', cleanDir);
 
                 // Write file to AppData
+                console.log('[PlatformService] Writing file to:', relativeDest);
                 await writeFile(relativeDest, new Uint8Array(content), { baseDir: BaseDirectory.AppData });
 
-                console.log('[PlatformService] Saved file:', relativeDest);
+                console.log('[PlatformService] Saved file successfully:', relativeDest);
                 return relativeDest;
             } catch (error) {
                 console.error('[PlatformService] Error saving downloaded file:', error);

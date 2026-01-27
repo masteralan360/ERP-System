@@ -324,7 +324,7 @@ class P2PSyncManager {
         try {
             // Generate unique storage path
             const timestamp = Date.now();
-            const storagePath = `${this.workspaceId}/${timestamp}_${file.name}`;
+            const storagePath = `${this.workspaceId}/${timestamp}_${file.name}`.replace(/\\/g, '/');
 
             // Upload to Supabase Storage
             const { error: uploadError } = await supabase.storage
@@ -344,7 +344,7 @@ class P2PSyncManager {
                     uploader_id: this.userId,
                     uploader_session_id: this.sessionId,
                     workspace_id: this.workspaceId,
-                    file_name: customFileName || file.name,
+                    file_name: (customFileName || file.name).replace(/\\/g, '/'),
                     storage_path: storagePath,
                     file_size: file.size,
                     synced_by: [this.sessionId]

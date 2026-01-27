@@ -13,6 +13,7 @@ import { isMobile } from '@/lib/platform'
 // Lazy load pages
 const Dashboard = lazy(() => import('@/ui/pages/Dashboard').then(m => ({ default: m.Dashboard })))
 const Login = lazy(() => import('@/ui/pages/Login').then(m => ({ default: m.Login })))
+const Register = lazy(() => import('@/ui/pages/Register').then(m => ({ default: m.Register })))
 const Products = lazy(() => import('@/ui/pages/Products').then(m => ({ default: m.Products })))
 const Customers = lazy(() => import('@/ui/pages/Customers').then(m => ({ default: m.Customers })))
 const Orders = lazy(() => import('@/ui/pages/Orders').then(m => ({ default: m.Orders })))
@@ -36,6 +37,8 @@ const isTauri = !!window.__TAURI_INTERNALS__
 
 // Preload list for Electron
 const pages = [
+    () => import('@/ui/pages/Login'),
+    () => import('@/ui/pages/Register'),
     () => import('@/ui/pages/Dashboard'),
     () => import('@/ui/pages/Products'),
     () => import('@/ui/pages/Customers'),
@@ -228,6 +231,11 @@ function App() {
                                     <Route path="/login">
                                         <GuestRoute>
                                             <Login />
+                                        </GuestRoute>
+                                    </Route>
+                                    <Route path="/register">
+                                        <GuestRoute>
+                                            <Register />
                                         </GuestRoute>
                                     </Route>
 

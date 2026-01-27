@@ -119,23 +119,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            console.log(`[Auth] State change: ${_event}`, session?.user?.id)
             setSession(session)
             const parsedUser = session?.user ? parseUserFromSupabase(session.user) : null
 
-            if (parsedUser && parsedUser.workspaceId && !parsedUser.workspaceCode) {
+            if (!parsedUser) {
+                setUser(null)
+                return
+            }
+
+            if (parsedUser.workspaceId && !parsedUser.workspaceCode) {
                 supabase
                     .from('workspaces')
                     .select('code, is_configured')
                     .eq('id', parsedUser.workspaceId)
                     .single()
                     .then(({ data }) => {
+                        // CRITICAL: Only update if the user we fetched for is still the current user
+                        // and we haven't signed out in the meantime
                         if (data) {
                             parsedUser.workspaceCode = data.code
                             parsedUser.isConfigured = data.is_configured
-                            setUser({ ...parsedUser })
+
+                            // Check again if we're still logged in as this user
+                            supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+                                if (currentSession?.user?.id === parsedUser.id) {
+                                    setUser({ ...parsedUser })
+                                }
+                            })
                         } else {
                             setUser(parsedUser)
                         }
+                    }, (e: any) => {
+                        console.error('[Auth] Error fetching workspace code during auth change:', e)
+                        setUser(parsedUser)
                     })
             } else {
                 setUser(parsedUser)
@@ -185,8 +202,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const { data: wsData, error: wsError } = await supabase.rpc('create_workspace', { w_name: workspaceName })
                 if (wsError) throw wsError
 
-                workspaceId = wsData.id
-                resolvedWorkspaceName = wsData.name // Should be same as workspaceName
+                workspaceId = wsData?.id || (Array.isArray(wsData) ? wsData[0]?.id : (wsData?.create_workspace?.id || ''))
+                resolvedWorkspaceName = wsData?.name || (Array.isArray(wsData) ? wsData[0]?.name : (wsData?.create_workspace?.name || workspaceName))
             } else {
                 if (!workspaceCode) throw new Error('Workspace code is required to join')
 
@@ -231,14 +248,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const signOut = async () => {
-        if (!isSupabaseConfigured) {
-            setUser(null)
-            return
-        }
+        try {
+            console.log('[Auth] Signing out...')
 
-        await supabase.auth.signOut()
-        setUser(null)
-        setSession(null)
+            // 1. Stop background sync processes
+            try {
+                const { p2pSyncManager } = await import('@/lib/p2pSyncManager')
+                await p2pSyncManager.destroy()
+            } catch (e) {
+                console.error('[Auth] Error destroying p2pSyncManager:', e)
+            }
+
+            if (isSupabaseConfigured) {
+                // 2. Revoke session on server
+                await supabase.auth.signOut()
+            }
+        } catch (err) {
+            console.error('[Auth] Error during signOut:', err)
+        } finally {
+            // 3. Clear all local state regardless of error
+            setUser(null)
+            setSession(null)
+
+            // 4. Clear workspace cache
+            localStorage.removeItem('erp_workspace_cache')
+
+            console.log('[Auth] Sign out complete')
+        }
     }
 
     const hasRole = (roles: UserRole[]): boolean => {
