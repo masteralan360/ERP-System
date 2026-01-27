@@ -199,6 +199,8 @@ export function Settings() {
             return
         }
 
+        if (!user) return
+
         try {
             const products = await db.products.where('workspaceId').equals(user.workspaceId).and(p => !p.isDeleted).toArray()
             // Filter products with local image paths
