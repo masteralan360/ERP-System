@@ -10,6 +10,7 @@ import { P2PSyncIndicator } from './P2PSyncStatus'
 import { p2pSyncManager } from '@/lib/p2pSyncManager'
 import { platformService } from '@/services/platformService'
 import { whatsappManager } from '@/lib/whatsappWebviewManager'
+import { ResourceSyncOverlay } from './p2p/ResourceSyncOverlay'
 
 import {
     LayoutDashboard,
@@ -168,6 +169,7 @@ export function Layout({ children }: LayoutProps) {
 
     return (
         <div className="h-screen overflow-hidden bg-transparent">
+            <ResourceSyncOverlay />
             {/* Mobile sidebar backdrop */}
             {mobileSidebarOpen && (
                 <div

@@ -28,6 +28,7 @@ export interface SyncProgress {
     progress?: number; // 0-100
     totalPending?: number;
     error?: string;
+    isInitialSync?: boolean;
 }
 
 type SyncEventListener = (progress: SyncProgress) => void;
@@ -42,6 +43,7 @@ class P2PSyncManager {
     private isInitialized = false;
     private downloadQueue: SyncQueueItem[] = [];
     private isProcessingQueue = false;
+    private isInitialSync = false;
 
     private constructor() { }
 
@@ -63,14 +65,16 @@ class P2PSyncManager {
         this.userId = userId;
         this.workspaceId = workspaceId;
         this.isInitialized = true;
+        this.isInitialSync = true;
+        this.emitProgress({ status: 'idle', isInitialSync: true });
 
         console.log('[P2PSync] Initializing for user:', userId, 'workspace:', workspaceId);
 
         // Subscribe to realtime changes
         await this.subscribeToChanges();
 
-        // Check for pending downloads immediately
-        await this.checkPendingDownloads();
+        // Check for pending downloads immediately (run in background to not block UI init)
+        this.checkPendingDownloads();
     }
 
     /**
@@ -99,45 +103,47 @@ class P2PSyncManager {
                     this.handleNewSyncItem(payload.new as SyncQueueItem);
                 }
             )
-            .subscribe((status) => {
-                console.log('[P2PSync] Realtime subscription status:', status);
-            });
+            .subscribe();
+    }
+
+    private emitProgress(progress: SyncProgress) {
+        // Merge with existing state to persist flags like isInitialSync
+        this.currentProgress = {
+            ...this.currentProgress,
+            ...progress,
+            isInitialSync: this.isInitialSync // Always reflect current flag
+        };
+        this.listeners.forEach(listener => listener(this.currentProgress));
     }
 
     /**
-     * Handle incoming sync item
+     * Handle header-based inserts
      */
-    private async handleNewSyncItem(item: SyncQueueItem): Promise<void> {
-        if (!this.userId) return;
-
-        // Skip if we uploaded it or already synced
+    private handleNewSyncItem(item: SyncQueueItem) {
         if (item.uploader_id === this.userId) return;
-        if (item.synced_by.includes(this.userId)) return;
 
-        // Add to download queue
         this.downloadQueue.push(item);
         this.processDownloadQueue();
     }
 
     /**
-     * Check for pending downloads on initialization
+     * Check database for any pending files we missed
      */
-    async checkPendingDownloads(): Promise<void> {
-        if (!isSupabaseConfigured || !this.workspaceId || !this.userId) return;
+    private async checkPendingDownloads() {
+        if (!this.userId || !this.workspaceId) return;
 
         try {
+            // Fetch files not synced by this user
             const { data, error } = await supabase
                 .from('sync_queue')
                 .select('*')
                 .eq('workspace_id', this.workspaceId)
-                .not('synced_by', 'cs', `["${this.userId}"]`);
+                .not('synced_by', 'cs', `["${this.userId}"]`) // synced_by is JSONB array
+                .gt('expires_at', new Date().toISOString());
 
-            if (error) {
-                console.error('[P2PSync] Error checking pending downloads:', error);
-                return;
-            }
+            if (error) throw error;
 
-            // Filter out items we uploaded
+            // Filter out items we uploaded (redundant but safe)
             const pending = (data || []).filter(
                 (item: SyncQueueItem) => item.uploader_id !== this.userId
             );
@@ -146,9 +152,20 @@ class P2PSyncManager {
                 console.log('[P2PSync] Found pending downloads:', pending.length);
                 this.downloadQueue.push(...pending);
                 this.processDownloadQueue();
+            } else {
+                // If no pending items, initial sync is done
+                if (this.isInitialSync) {
+                    this.isInitialSync = false;
+                    this.emitProgress({ status: 'idle', isInitialSync: false });
+                }
             }
         } catch (e) {
             console.error('[P2PSync] Error in checkPendingDownloads:', e);
+            // On error, disable blocking overlay?
+            if (this.isInitialSync) {
+                this.isInitialSync = false;
+                this.emitProgress({ status: 'error', error: 'Init failed', isInitialSync: false });
+            }
         }
     }
 
@@ -176,7 +193,13 @@ class P2PSyncManager {
         }
 
         this.isProcessingQueue = false;
-        this.emitProgress({ status: 'idle' });
+
+        // If queue is empty and we were in initial sync, mark it detailed
+        if (this.isInitialSync) {
+            this.isInitialSync = false;
+        }
+
+        this.emitProgress({ status: 'idle', isInitialSync: false });
     }
 
     /**
@@ -203,31 +226,31 @@ class P2PSyncManager {
             throw error;
         }
 
-        // Save locally using Tauri if available (Desktop or Android)
-        if (isTauri() && data) {
+        // Save locally using platform service (mobile compatible)
+        if (isTauri() && data && this.workspaceId) {
             try {
-                const { appDataDir, join } = await import('@tauri-apps/api/path');
-                const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
+                // Dynamically import to keep web bundle light if platformService isn't fully tree-shaken
+                const { platformService } = await import('@/services/platformService');
 
-                const appData = await appDataDir();
-                const syncDir = await join(appData, 'sync_images');
+                await platformService.saveDownloadedFile(
+                    this.workspaceId,
+                    item.file_name,
+                    await data.arrayBuffer()
+                );
 
-                // Ensure directory exists
-                if (!(await exists(syncDir))) {
-                    await mkdir(syncDir, { recursive: true });
-                }
-
-                const filePath = await join(syncDir, item.file_name);
-                const arrayBuffer = await data.arrayBuffer();
-                await writeFile(filePath, new Uint8Array(arrayBuffer));
-
-                console.log('[P2PSync] Saved to:', filePath);
+                console.log('[P2PSync] Saved via platform service:', item.file_name);
             } catch (fsError) {
-                console.error('[P2PSync] Filesystem error:', fsError);
-                // On web or error, we can still mark as synced
+                console.error('[P2PSync] Platform save error:', fsError);
+                // On web or error, we can still mark as synced potentially, but better to retry?
+                // For now, allow proceed to ack so we don't get stuck, 
+                // OR re-throw? 
+                // Getting stuck is bad. Acking without saving means "I have it".
+                // If save failed, we DON'T have it.
+                // So we should NOT Ack.
+                throw fsError;
             }
         } else if (data) {
-            // Web fallback: trigger download
+            // Web fallback: trigger browser download
             const url = URL.createObjectURL(data);
             const a = document.createElement('a');
             a.href = url;
@@ -238,16 +261,46 @@ class P2PSyncManager {
         }
 
         // Mark as synced in database
-        const updatedSyncedBy = [...item.synced_by, this.userId];
-        const { error: updateError } = await supabase
-            .from('sync_queue')
-            .update({ synced_by: updatedSyncedBy })
-            .eq('id', item.id);
+        // Mark as synced using RPC for atomic cleanup check
+        const { data: ackData, error: ackError } = await supabase.rpc('acknowledge_p2p_sync', {
+            p_queue_id: item.id,
+            p_user_id: this.userId
+        });
 
-        if (updateError) {
-            console.error('[P2PSync] Failed to mark as synced:', updateError);
+        if (ackError) {
+            console.error('[P2PSync] Ack error:', ackError);
         } else {
             console.log('[P2PSync] Marked as synced:', item.file_name);
+
+            // detailed check if we are the last one
+            const result = Array.isArray(ackData) ? ackData[0] : ackData;
+
+            if (result?.is_complete) {
+                console.log('[P2PSync] Last member synced! Cleaning up:', result.file_name);
+
+                // 1. Delete File from Storage
+                const { error: storageError } = await supabase.storage
+                    .from('temp_sync')
+                    .remove([result.storage_path]);
+
+                if (storageError) {
+                    console.error('[P2PSync] Cleanup storage error:', storageError);
+                } else {
+                    console.log('[P2PSync] File removed from cloud storage');
+                }
+
+                // 2. Delete Record from Sync Queue
+                const { error: dbError } = await supabase
+                    .from('sync_queue')
+                    .delete()
+                    .eq('id', item.id);
+
+                if (dbError) {
+                    console.error('[P2PSync] Cleanup DB error:', dbError);
+                } else {
+                    console.log('[P2PSync] Sync record removed from database');
+                }
+            }
         }
     }
 
@@ -327,11 +380,11 @@ class P2PSyncManager {
         }
 
         try {
-            const { readFile } = await import('@tauri-apps/plugin-fs');
+            const { readFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
             const { basename } = await import('@tauri-apps/api/path');
 
-            // Read the file from disk
-            const fileData = await readFile(filePath);
+            // Read the file from disk (relative to AppData)
+            const fileData = await readFile(filePath, { baseDir: BaseDirectory.AppData });
             const fileName = await basename(filePath);
 
             // Determine MIME type from extension
@@ -367,17 +420,7 @@ class P2PSyncManager {
         return () => this.listeners.delete(listener);
     }
 
-    /**
-     * Emit progress to all listeners
-     */
-    private emitProgress(progress: SyncProgress): void {
-        this.currentProgress = progress;
-        this.listeners.forEach((listener) => listener(progress));
-        // Also emit as DOM event for non-React consumers
-        window.dispatchEvent(
-            new CustomEvent('p2p-sync-progress', { detail: progress })
-        );
-    }
+
 
     /**
      * Cleanup on logout/unmount

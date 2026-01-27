@@ -44,6 +44,14 @@
       ]
     },
     {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        {
+          "path": "$APPDATA/**/*"
+        }
+      ]
+    },
+    {
       "identifier": "fs:allow-write-file",
       "allow": [
         {

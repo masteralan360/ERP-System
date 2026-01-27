@@ -4,19 +4,47 @@ import { isDesktop, isMobile, isTauri, PlatformAPI } from '../lib/platform';
  * Service to handle platform-specific operations
  */
 class PlatformService implements PlatformAPI {
+    private appDataPath: string = '';
+
+    async initialize() {
+        if (isTauri()) {
+            try {
+                const { appDataDir } = await import('@tauri-apps/api/path');
+                this.appDataPath = await appDataDir();
+                console.log('[PlatformService] Initialized AppData path:', this.appDataPath);
+            } catch (e) {
+                console.error('[PlatformService] Failed to get AppData path:', e);
+            }
+        }
+    }
 
     convertFileSrc(path: string): string {
         if (isTauri()) {
             try {
-                // In Tauri v2, if withGlobalTauri is true, it's under window.__TAURI__.core
-                const tauri = (window as any).__TAURI__;
-                if (tauri?.core?.convertFileSrc) {
-                    return tauri.core.convertFileSrc(path);
+                let finalPath = path;
+
+                // 1. Resolve relative paths if we have the cached AppData path
+                // This handles "product-images/..." -> "C:/Users/.../AppData/.../product-images/..."
+                if (this.appDataPath && !path.startsWith('http') && !path.includes(':') && !path.startsWith('/') && !path.startsWith('\\')) {
+                    // Normalize everything to forward slashes
+                    const cleanAppData = this.appDataPath.replace(/\\/g, '/');
+                    const cleanPath = path.replace(/\\/g, '/');
+
+                    const relPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+                    const base = cleanAppData.endsWith('/') ? cleanAppData.slice(0, -1) : cleanAppData;
+
+                    finalPath = `${base}/${relPath}`;
                 }
 
-                // Fallback for newer Tauri 2 patterns
+                // 2. Use Tauri v2 native converter if available
+                const tauri = (window as any).__TAURI__;
+                if (tauri?.core?.convertFileSrc) {
+                    return tauri.core.convertFileSrc(finalPath);
+                }
+
+                // 3. Fallback for older patterns / direct construction
                 if ((window as any).__TAURI_INTERNALS__) {
-                    const normalizedPath = path.replace(/\\/g, '/');
+                    const normalizedPath = finalPath.replace(/\\/g, '/');
                     // In v2 on Windows, the protocol is typically https://asset.localhost/
                     const assetUrl = `https://asset.localhost/${normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath}`;
                     return assetUrl;
@@ -94,7 +122,6 @@ class PlatformService implements PlatformAPI {
             try {
                 const { open } = await import('@tauri-apps/plugin-dialog');
                 const { mkdir, copyFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-                const { appDataDir, join } = await import('@tauri-apps/api/path');
 
                 const selected = await open({
                     multiple: false,
@@ -111,17 +138,42 @@ class PlatformService implements PlatformAPI {
                     const relativeDest = `${relativeDir}/${fileName}`;
                     await copyFile(selected, relativeDest, { toPathBaseDir: BaseDirectory.AppData });
 
-                    const appData = await appDataDir();
-                    const targetDir = await join(appData, relativeDir);
-                    const targetPath = await join(targetDir, fileName);
-
-                    return targetPath;
+                    // Return relative path (e.g. product-images/uuid/123.jpg)
+                    return relativeDest;
                 }
             } catch (error) {
                 console.error('Error picking/saving image in Tauri:', error);
             }
         }
 
+        return null;
+    }
+
+    /**
+     * Save a downloaded file to AppData using BaseDirectory for mobile compatibility
+     */
+    async saveDownloadedFile(workspaceId: string, fileName: string, content: ArrayBuffer, subDir: string = 'product-images'): Promise<string | null> {
+        if (isTauri()) {
+            try {
+                const { mkdir, writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+
+                const relativeDir = `${subDir}/${workspaceId}`;
+
+                // Ensure directory exists in AppData
+                await mkdir(relativeDir, { baseDir: BaseDirectory.AppData, recursive: true });
+
+                const relativeDest = `${relativeDir}/${fileName}`;
+
+                // Write file to AppData
+                await writeFile(relativeDest, new Uint8Array(content), { baseDir: BaseDirectory.AppData });
+
+                console.log('[PlatformService] Saved file:', relativeDest);
+                return relativeDest;
+            } catch (error) {
+                console.error('[PlatformService] Error saving downloaded file:', error);
+                throw error;
+            }
+        }
         return null;
     }
 }
