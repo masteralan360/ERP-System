@@ -18,6 +18,7 @@ interface AuthUser {
 interface AuthContextType {
     user: AuthUser | null
     session: Session | null
+    sessionId: string | null
     isLoading: boolean
     isAuthenticated: boolean
     isKicked: boolean
@@ -63,6 +64,16 @@ function parseUserFromSupabase(user: User): AuthUser {
         workspaceName: user.user_metadata?.workspace_name,
         avatarUrl: user.user_metadata?.avatar_url,
         isConfigured: user.user_metadata?.is_configured
+    }
+}
+
+function decodeSessionId(token: string | undefined): string | null {
+    if (!token) return null
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        return payload.session_id || payload.sid || null
+    } catch {
+        return null
     }
 }
 
@@ -282,6 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             value={{
                 user,
                 session,
+                sessionId: decodeSessionId(session?.access_token),
                 isLoading,
                 isAuthenticated: !!user,
                 isKicked,

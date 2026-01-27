@@ -14,6 +14,7 @@ export interface SyncQueueItem {
     id: string;
     created_at: string;
     uploader_id: string;
+    uploader_session_id?: string;
     workspace_id: string;
     file_name: string;
     storage_path: string;
@@ -38,6 +39,7 @@ class P2PSyncManager {
     private channel: RealtimeChannel | null = null;
     private userId: string | null = null;
     private workspaceId: string | null = null;
+    private sessionId: string | null = null;
     private listeners: Set<SyncEventListener> = new Set();
     private currentProgress: SyncProgress = { status: 'idle' };
     private isInitialized = false;
@@ -57,13 +59,14 @@ class P2PSyncManager {
     /**
      * Initialize the sync manager with user context
      */
-    async initialize(userId: string, workspaceId: string): Promise<void> {
-        if (this.isInitialized && this.userId === userId && this.workspaceId === workspaceId) {
+    async initialize(userId: string, workspaceId: string, sessionId: string | null = null): Promise<void> {
+        if (this.isInitialized && this.userId === userId && this.workspaceId === workspaceId && this.sessionId === sessionId) {
             return;
         }
 
         this.userId = userId;
         this.workspaceId = workspaceId;
+        this.sessionId = sessionId;
         this.isInitialized = true;
         this.isInitialSync = true;
         this.emitProgress({ status: 'idle', isInitialSync: true });
@@ -120,7 +123,7 @@ class P2PSyncManager {
      * Handle header-based inserts
      */
     private handleNewSyncItem(item: SyncQueueItem) {
-        if (item.uploader_id === this.userId) return;
+        if (item.uploader_session_id === this.sessionId) return;
 
         this.downloadQueue.push(item);
         this.processDownloadQueue();
@@ -133,19 +136,19 @@ class P2PSyncManager {
         if (!this.userId || !this.workspaceId) return;
 
         try {
-            // Fetch files not synced by this user
+            // Fetch files not synced by this session
             const { data, error } = await supabase
                 .from('sync_queue')
                 .select('*')
                 .eq('workspace_id', this.workspaceId)
-                .not('synced_by', 'cs', `["${this.userId}"]`) // synced_by is JSONB array
+                .not('synced_by', 'cs', `["${this.sessionId}"]`) // synced_by is JSONB array
                 .gt('expires_at', new Date().toISOString());
 
             if (error) throw error;
 
-            // Filter out items we uploaded (redundant but safe)
+            // Filter out items uploaded by this specific session
             const pending = (data || []).filter(
-                (item: SyncQueueItem) => item.uploader_id !== this.userId
+                (item: SyncQueueItem) => item.uploader_session_id !== this.sessionId
             );
 
             if (pending.length > 0) {
@@ -264,7 +267,7 @@ class P2PSyncManager {
         // Mark as synced using RPC for atomic cleanup check
         const { data: ackData, error: ackError } = await supabase.rpc('acknowledge_p2p_sync', {
             p_queue_id: item.id,
-            p_user_id: this.userId
+            p_session_id: this.sessionId
         });
 
         if (ackError) {
@@ -307,7 +310,7 @@ class P2PSyncManager {
     /**
      * Upload a file to the sync queue for other users
      */
-    async uploadFile(file: File): Promise<boolean> {
+    async uploadFile(file: File, customFileName?: string): Promise<boolean> {
         if (!isSupabaseConfigured || !this.workspaceId || !this.userId) {
             console.error('[P2PSync] Not initialized');
             return false;
@@ -315,7 +318,7 @@ class P2PSyncManager {
 
         this.emitProgress({
             status: 'uploading',
-            currentFile: file.name
+            currentFile: customFileName || file.name
         });
 
         try {
@@ -339,11 +342,12 @@ class P2PSyncManager {
                 .from('sync_queue')
                 .insert({
                     uploader_id: this.userId,
+                    uploader_session_id: this.sessionId,
                     workspace_id: this.workspaceId,
-                    file_name: file.name,
+                    file_name: customFileName || file.name,
                     storage_path: storagePath,
                     file_size: file.size,
-                    synced_by: [this.userId]
+                    synced_by: [this.sessionId]
                 });
 
             if (insertError) {
@@ -354,7 +358,7 @@ class P2PSyncManager {
                 return false;
             }
 
-            console.log('[P2PSync] Upload complete:', file.name);
+            console.log('[P2PSync] Upload complete:', customFileName || file.name);
             this.emitProgress({ status: 'idle' });
             return true;
         } catch (e) {
@@ -401,8 +405,8 @@ class P2PSyncManager {
             // Create a File object
             const file = new File([fileData], fileName, { type: mimeType });
 
-            // Use existing uploadFile method
-            return await this.uploadFile(file);
+            // Use existing uploadFile method - passing full relative path to preserve it
+            return await this.uploadFile(file, filePath);
         } catch (e) {
             console.error('[P2PSync] uploadFromPath error:', e);
             this.emitProgress({ status: 'error', error: String(e) });
@@ -433,6 +437,7 @@ class P2PSyncManager {
         this.isInitialized = false;
         this.userId = null;
         this.workspaceId = null;
+        this.sessionId = null;
         this.downloadQueue = [];
         this.listeners.clear();
         console.log('[P2PSync] Destroyed');

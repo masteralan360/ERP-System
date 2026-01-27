@@ -15,9 +15,10 @@ import { getAppSettingSync, setAppSetting } from '@/local-db/settings'
 import { check } from '@tauri-apps/plugin-updater';
 import { platformService } from '@/services/platformService'
 import { Image as ImageIcon } from 'lucide-react'
+import { p2pSyncManager } from '@/lib/p2pSyncManager'
 
 export function Settings() {
-    const { user, signOut, isSupabaseConfigured } = useAuth()
+    const { user, sessionId, signOut, isSupabaseConfigured } = useAuth()
     const { syncState, pendingCount, lastSyncTime, sync, isSyncing, isOnline } = useSyncStatus()
     const { theme, setTheme, style, setStyle } = useTheme()
     const { features, updateSettings } = useWorkspace()
@@ -192,6 +193,13 @@ export function Settings() {
         const targetPath = await platformService.pickAndSaveImage(user.workspaceId, 'workspace-logos')
         if (targetPath) {
             await updateSettings({ logo_url: targetPath })
+
+            // Trigger P2P sync for other workspace users
+            p2pSyncManager.uploadFromPath(targetPath).then(success => {
+                if (success) {
+                    console.log('[Settings] Workspace logo synced to workspace users');
+                }
+            }).catch(console.error);
         }
     }
 
@@ -744,6 +752,20 @@ export function Settings() {
                                     <Label className="text-muted-foreground">{t('settings.authMode')}</Label>
                                     <p className="font-medium">{isSupabaseConfigured ? 'Supabase' : t('settings.demo')}</p>
                                 </div>
+                                {isSupabaseConfigured && sessionId && (
+                                    <div className="md:col-span-2">
+                                        <Label className="text-muted-foreground">Session ID</Label>
+                                        <div
+                                            className="flex items-center gap-2 mt-1 px-3 py-2 bg-secondary/20 rounded-lg border border-border group cursor-pointer hover:border-primary/50 transition-colors w-full max-w-sm"
+                                            onClick={() => copyToClipboard(sessionId)}
+                                        >
+                                            <p className="font-mono text-xs truncate flex-1">{sessionId}</p>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Copy className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="md:col-span-2">
                                     <Label className="text-muted-foreground">{t('auth.workspaceCode')}</Label>
                                     <div

@@ -48,7 +48,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
     const [location] = useLocation()
-    const { user, signOut } = useAuth()
+    const { user, sessionId, signOut } = useAuth()
     const { hasFeature, workspaceName, isFullscreen, features } = useWorkspace()
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
     const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(() => {
@@ -88,7 +88,7 @@ export function Layout({ children }: LayoutProps) {
 
         // Initialize P2P Sync Manager
         if (user?.id && user?.workspaceId) {
-            p2pSyncManager.initialize(user.id, user.workspaceId).catch(console.error);
+            p2pSyncManager.initialize(user.id, user.workspaceId, sessionId).catch(console.error);
         }
 
         // Fetch App Version

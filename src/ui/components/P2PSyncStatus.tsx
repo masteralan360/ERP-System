@@ -22,6 +22,12 @@ export function P2PSyncStatus() {
         return null;
     }
 
+    const formatFileName = (name?: string) => {
+        if (!name) return '';
+        const parts = name.split(/[/\\]/);
+        return parts[parts.length - 1];
+    };
+
     const getIcon = () => {
         switch (progress.status) {
             case 'uploading':
@@ -36,13 +42,14 @@ export function P2PSyncStatus() {
     };
 
     const getMessage = () => {
+        const fileName = formatFileName(progress.currentFile);
         switch (progress.status) {
             case 'uploading':
-                return `Uploading ${progress.currentFile || 'file'}...`;
+                return `Uploading ${fileName || 'file'}...`;
             case 'downloading':
                 return progress.totalPending && progress.totalPending > 1
                     ? `Downloading ${progress.totalPending} files...`
-                    : `Downloading ${progress.currentFile || 'file'}...`;
+                    : `Downloading ${fileName || 'file'}...`;
             case 'error':
                 return progress.error || 'Sync error';
             default:
@@ -92,6 +99,12 @@ export function P2PSyncIndicator() {
         progress.status === 'downloading' && 'text-green-500 animate-pulse'
     );
 
+    const formatFileName = (name?: string) => {
+        if (!name) return '';
+        const parts = name.split(/[/\\]/);
+        return parts[parts.length - 1];
+    };
+
     return (
         <div className="relative group">
             {progress.status === 'uploading' && <CloudUpload className={iconClass} />}
@@ -100,7 +113,7 @@ export function P2PSyncIndicator() {
 
             {/* Tooltip */}
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                {progress.currentFile || progress.status}
+                {formatFileName(progress.currentFile) || progress.status}
                 {progress.totalPending && progress.totalPending > 1 && (
                     <span> ({progress.totalPending} pending)</span>
                 )}

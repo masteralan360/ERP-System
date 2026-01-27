@@ -152,17 +152,24 @@ class PlatformService implements PlatformAPI {
     /**
      * Save a downloaded file to AppData using BaseDirectory for mobile compatibility
      */
-    async saveDownloadedFile(workspaceId: string, fileName: string, content: ArrayBuffer, subDir: string = 'product-images'): Promise<string | null> {
+    async saveDownloadedFile(workspaceId: string, filePath: string, content: ArrayBuffer, defaultSubDir: string = 'product-images'): Promise<string | null> {
         if (isTauri()) {
             try {
                 const { mkdir, writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+                const { dirname } = await import('@tauri-apps/api/path');
 
-                const relativeDir = `${subDir}/${workspaceId}`;
+                let relativeDest = filePath;
+
+                // If filePath is just a filename (no slashes), use the default structure
+                if (!filePath.includes('/') && !filePath.includes('\\')) {
+                    relativeDest = `${defaultSubDir}/${workspaceId}/${filePath}`;
+                }
+
+                // Get directory part from the final path
+                const dir = await dirname(relativeDest);
 
                 // Ensure directory exists in AppData
-                await mkdir(relativeDir, { baseDir: BaseDirectory.AppData, recursive: true });
-
-                const relativeDest = `${relativeDir}/${fileName}`;
+                await mkdir(dir, { baseDir: BaseDirectory.AppData, recursive: true });
 
                 // Write file to AppData
                 await writeFile(relativeDest, new Uint8Array(content), { baseDir: BaseDirectory.AppData });
