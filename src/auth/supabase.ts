@@ -2,16 +2,21 @@ import { createClient } from '@supabase/supabase-js'
 import { getAppSettingSync } from '@/local-db/settings'
 import { decrypt } from '@/lib/encryption'
 
-const rawUrl = getAppSettingSync('supabase_url') || import.meta.env.VITE_SUPABASE_URL || ''
-const rawKey = getAppSettingSync('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const rawUrl = (getAppSettingSync('supabase_url') || '').trim()
+const rawKey = (getAppSettingSync('supabase_anon_key') || '').trim()
 
-const supabaseUrl = decrypt(rawUrl)
-const supabaseAnonKey = decrypt(rawKey)
+console.log('[Supabase Config] Raw URL starts with:', rawUrl.substring(0, 10))
+console.log('[Supabase Config] Raw Key starts with:', rawKey.substring(0, 10))
+
+const supabaseUrl = decrypt(rawUrl).trim()
+const supabaseAnonKey = decrypt(rawKey).trim()
+
+console.log('[Supabase Config] Decrypted URL starts with:', supabaseUrl.substring(0, 10))
+console.log('[Supabase Config] Decrypted Key starts with:', supabaseAnonKey.substring(0, 10))
 
 // Check if Supabase is configured with valid values
-// We check against the actual values before fallback
 const isUrlValid = supabaseUrl && supabaseUrl.startsWith('https://') && !supabaseUrl.includes('your_supabase_url')
-const isKeyValid = supabaseAnonKey && !supabaseAnonKey.includes('your_supabase_anon')
+const isKeyValid = supabaseAnonKey && supabaseAnonKey.length > 50 && !supabaseAnonKey.includes('your_supabase_anon')
 
 export const isSupabaseConfigured = Boolean(isUrlValid && isKeyValid)
 
