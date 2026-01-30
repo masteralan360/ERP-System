@@ -20,7 +20,7 @@ export function ConnectionConfiguration() {
             return
         }
 
-        if (!url.startsWith('https://')) {
+        if (!url.startsWith('https://') && !url.startsWith('U2FsdGVkX1')) {
             setError('URL must start with https://')
             return
         }

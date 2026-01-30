@@ -8,6 +8,11 @@ const KEY = 'iraqcore-supabase-key';
 export const encrypt = (text: string): string => {
     if (!text) return '';
     try {
+        // If it starts with this prefix, it's likely already encrypted.
+        // Returning as-is to prevent double-encryption.
+        if (text.startsWith('U2FsdGVkX1')) {
+            return text;
+        }
         return CryptoJS.AES.encrypt(text, KEY).toString();
     } catch (error) {
         console.error('Encryption failed:', error);
