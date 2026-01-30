@@ -79,14 +79,14 @@ export function TitleBar() {
     if (!isTauri) return null
 
     return (
-        <div data-tauri-drag-region className={cn(
+        <div dir="ltr" data-tauri-drag-region className={cn(
             "fixed top-0 left-0 right-0 h-[48px] z-[100] flex items-center justify-between px-3 select-none bg-background/80 backdrop-blur-md border-b border-white/10 transition-all duration-300",
             isFullscreen && "opacity-0 pointer-events-none -translate-y-full"
         )}>
             <div data-tauri-drag-region className="flex items-center gap-3 w-1/3">
                 <img src={logoPath} alt="Logo" className="w-8 h-8 opacity-90 rounded-sm" onError={(e) => e.currentTarget.style.display = 'none'} />
                 <span data-tauri-drag-region className="text-sm font-medium opacity-80 truncate">
-                    {workspaceName || 'ERP System'}
+                    {workspaceName || t('auth.titleName')}
                 </span>
             </div>
 

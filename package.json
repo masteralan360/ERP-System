@@ -1,7 +1,7 @@
 {
   "name": "erp-system",
   "private": true,
-  "version": "1.5.1",
+  "version": "1.5.2",
   "main": "electron/main.cjs",
   "type": "module",
   "repository": {
@@ -20,7 +20,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/logo.ico"
+      "icon": "public/en-default.ico"
     },
     "publish": {
       "provider": "github",

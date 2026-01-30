@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useLocation } from 'wouter'
 import { useAuth } from '@/auth'
 import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle, CardDescription, LanguageSwitcher, ThemeToggle } from '@/ui/components'
-import { Boxes, Mail, Lock, Loader2 } from 'lucide-react'
+import { Mail, Lock, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/ui/components/theme-provider'
@@ -13,6 +13,12 @@ export function Login() {
     const { signIn, isSupabaseConfigured } = useAuth()
     const { t, i18n } = useTranslation()
     const { style } = useTheme()
+    const getAuthLogo = () => {
+        if (i18n.language === 'ar') return '/logoPNG/ar.png'
+        if (i18n.language === 'ku') return style === 'modern' ? '/logoPNG/ku-purple.png' : '/logoPNG/ku-blue.png'
+        return '/logoPNG/en.png'
+    }
+    const logoPath = getAuthLogo()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
@@ -76,11 +82,15 @@ export function Login() {
 
                 <div className="w-full max-w-md space-y-6">
                     <div className="flex flex-col items-center gap-2">
-                        <div className="p-3 bg-primary/10 rounded-2xl">
-                            <Boxes className="w-10 h-10 text-primary" />
+                        <div className="p-1 bg-primary/10 rounded-2xl overflow-hidden">
+                            <img
+                                src={logoPath}
+                                alt="Asas System"
+                                className="w-16 h-16 object-contain rounded-xl shadow-sm hover:scale-105 transition-transform duration-300"
+                            />
                         </div>
-                        <h1 className="text-2xl font-bold gradient-text">ERP System</h1>
-                        <p className="text-sm text-muted-foreground">Offline-First Enterprise Management</p>
+                        <h1 className="text-2xl font-bold gradient-text">{t('auth.systemName')}</h1>
+                        <p className="text-sm text-muted-foreground">{t('auth.systemSubtitle')}</p>
                     </div>
 
                     <Card className="glass">

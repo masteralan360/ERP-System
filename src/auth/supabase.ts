@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { getAppSettingSync } from '@/local-db/settings'
+import { decrypt } from '@/lib/encryption'
 
-const supabaseUrl = getAppSettingSync('supabase_url') || import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = getAppSettingSync('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const rawUrl = getAppSettingSync('supabase_url') || import.meta.env.VITE_SUPABASE_URL || ''
+const rawKey = getAppSettingSync('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+
+const supabaseUrl = decrypt(rawUrl)
+const supabaseAnonKey = decrypt(rawKey)
 
 // Check if Supabase is configured with valid values
 // We check against the actual values before fallback

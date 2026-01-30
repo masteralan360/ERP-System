@@ -20,7 +20,7 @@ type ThemeProviderState = {
 
 const initialState: ThemeProviderState = {
     theme: "system",
-    style: "modern",
+    style: "primary",
     setTheme: () => null,
     setStyle: () => null,
 }
@@ -30,7 +30,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 export function ThemeProvider({
     children,
     defaultTheme = "system",
-    defaultStyle = "modern",
+    defaultStyle = "primary",
     storageKey = "vite-ui-theme",
     styleStorageKey = "vite-ui-theme-style",
 }: ThemeProviderProps) {

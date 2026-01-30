@@ -238,6 +238,9 @@
         }
     },
     "auth": {
+        "systemName": "Asas System",
+        "titleName": "Asas System ┃ نضام اساس",
+        "systemSubtitle": "أساس تميز أعمالك",
         "login": "تسجيل الدخول",
         "register": "تسجيل جديد",
         "email": "البريد الإلكتروني",

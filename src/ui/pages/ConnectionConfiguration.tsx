@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, Button, Input, Label } from '@/ui/components'
 import { setAppSetting } from '@/local-db/settings'
+import { encrypt } from '@/lib/encryption'
 import { Server, Globe, Shield, RefreshCw, AlertCircle } from 'lucide-react'
 import { relaunch } from '@tauri-apps/plugin-process';
 
@@ -26,8 +27,8 @@ export function ConnectionConfiguration() {
 
         try {
             setIsSaving(true)
-            await setAppSetting('supabase_url', url.trim())
-            await setAppSetting('supabase_anon_key', anonKey.trim())
+            await setAppSetting('supabase_url', encrypt(url.trim()))
+            await setAppSetting('supabase_anon_key', encrypt(anonKey.trim()))
 
             // Reload the app to apply changes
             await relaunch();

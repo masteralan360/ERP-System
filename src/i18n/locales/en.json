@@ -263,6 +263,9 @@
         }
     },
     "auth": {
+        "systemName": "Asas System",
+        "titleName": "Asas System ┃ The Foundation of Your Business",
+        "systemSubtitle": "The Foundation of Your Business Excellence",
         "login": "Login",
         "register": "Register",
         "email": "Email",

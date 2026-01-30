@@ -263,6 +263,9 @@
         }
     },
     "auth": {
+        "systemName": "Asas System",
+        "titleName": "Asas System ┃ سیستەمی بناغە",
+        "systemSubtitle": "بناغەی سەرکەوتنی کارەکەت",
         "login": "چوونەژوورەوە",
         "register": "تۆمارکردن",
         "email": "ئیمەیڵ",
