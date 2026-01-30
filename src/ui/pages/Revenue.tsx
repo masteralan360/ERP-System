@@ -23,7 +23,11 @@ import {
     TooltipContent,
     TooltipProvider,
     SaleDetailsModal,
-    MetricDetailModal
+    MetricDetailModal,
+    TopProductsModal,
+    SalesOverviewModal,
+    PeakTradingModal,
+    ReturnsAnalysisModal
 } from '@/ui/components'
 import type { MetricType } from '@/ui/components/MetricDetailModal'
 import {
@@ -33,7 +37,10 @@ import {
     Info,
     ArrowRight,
     Package,
-    Percent
+    Percent,
+    BarChart3,
+    Clock,
+    RotateCcw
 } from 'lucide-react'
 
 export function Revenue() {
@@ -45,6 +52,10 @@ export function Revenue() {
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
     const [selectedMetric, setSelectedMetric] = useState<MetricType | null>(null)
     const [isMetricModalOpen, setIsMetricModalOpen] = useState(false)
+    const [isTopProductsOpen, setIsTopProductsOpen] = useState(false)
+    const [isSalesOverviewOpen, setIsSalesOverviewOpen] = useState(false)
+    const [isPeakTradingOpen, setIsPeakTradingOpen] = useState(false)
+    const [isReturnsOpen, setIsReturnsOpen] = useState(false)
 
     const openMetricModal = (type: MetricType) => {
         setSelectedMetric(type)
@@ -365,6 +376,93 @@ export function Revenue() {
                     </Card>
                 </div>
 
+                {/* Analytics Quick Actions */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Top Products */}
+                    <Card
+                        className="bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20 cursor-pointer hover:scale-[1.02] transition-all hover:bg-emerald-500/10 hover:shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)] active:scale-95 group relative overflow-hidden rounded-3xl"
+                        onClick={() => setIsTopProductsOpen(true)}
+                    >
+                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ArrowRight className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
+                                <Package className="w-4 h-4" />
+                                {t('revenue.topProducts') || 'Top Products'}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-xs text-muted-foreground font-medium">
+                                {t('revenue.topProductsDesc') || 'Best sellers by revenue, quantity, or cost'}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Sales Overview */}
+                    <Card
+                        className="bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20 cursor-pointer hover:scale-[1.02] transition-all hover:bg-blue-500/10 hover:shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)] active:scale-95 group relative overflow-hidden rounded-3xl"
+                        onClick={() => setIsSalesOverviewOpen(true)}
+                    >
+                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ArrowRight className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-black text-blue-600 dark:text-blue-400 flex items-center gap-2 uppercase tracking-widest">
+                                <BarChart3 className="w-4 h-4" />
+                                {t('revenue.salesOverview') || 'Sales Overview'}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-xs text-muted-foreground font-medium">
+                                {t('revenue.salesOverviewDesc') || 'Revenue, cost & profit combined'}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Peak Times */}
+                    <Card
+                        className="bg-violet-500/5 dark:bg-violet-500/10 border-violet-500/20 cursor-pointer hover:scale-[1.02] transition-all hover:bg-violet-500/10 hover:shadow-[0_0_20px_-5px_rgba(139,92,246,0.3)] active:scale-95 group relative overflow-hidden rounded-3xl"
+                        onClick={() => setIsPeakTradingOpen(true)}
+                    >
+                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ArrowRight className="w-4 h-4 text-violet-500" />
+                        </div>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-black text-violet-600 dark:text-violet-400 flex items-center gap-2 uppercase tracking-widest">
+                                <Clock className="w-4 h-4" />
+                                {t('revenue.peakTimes') || 'Peak Times'}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-xs text-muted-foreground font-medium">
+                                {t('revenue.peakTimesDesc') || 'Busiest hours of the day'}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Returns */}
+                    <Card
+                        className="bg-red-500/5 dark:bg-red-500/10 border-red-500/20 cursor-pointer hover:scale-[1.02] transition-all hover:bg-red-500/10 hover:shadow-[0_0_20px_-5px_rgba(239,68,68,0.3)] active:scale-95 group relative overflow-hidden rounded-3xl"
+                        onClick={() => setIsReturnsOpen(true)}
+                    >
+                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ArrowRight className="w-4 h-4 text-red-500" />
+                        </div>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-black text-red-600 dark:text-red-400 flex items-center gap-2 uppercase tracking-widest">
+                                <RotateCcw className="w-4 h-4" />
+                                {t('revenue.returns') || 'Returns'}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-xs text-muted-foreground font-medium">
+                                {t('revenue.returnsDesc') || 'Track refunds and product returns'}
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
                 {/* Sale Profitability Table */}
                 <Card>
                     <CardHeader>
@@ -376,76 +474,102 @@ export function Revenue() {
                     <CardContent>
                         {isMobile() ? (
                             <div className="grid grid-cols-1 gap-4">
-                                {stats.saleStats.map((sale, idx) => (
-                                    <div
-                                        key={sale.id || idx}
-                                        className="p-4 rounded-[2rem] border border-border bg-card shadow-sm space-y-4"
-                                        onClick={() => {
-                                            const originalSale = sales.find(s => s.id === sale.id)
-                                            if (originalSale) setSelectedSale(originalSale)
-                                        }}
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div className="space-y-1">
-                                                <div className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider">
-                                                    {formatDateTime(sale.date)}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-mono font-black text-primary">
-                                                        #{sale.id.split('-')[0]}
-                                                    </span>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Info className="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer" />
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            {t('revenue.viewDetails') || 'View Sale Details'}
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                    {sale.hasPartialReturn && (
-                                                        <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-orange-500/10 text-orange-600 border border-orange-500/20 uppercase">
-                                                            {t('sales.return.partialReturn')}
-                                                        </span>
-                                                    )}
-                                                    <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-secondary uppercase">
-                                                        {sale.origin}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className={cn(
-                                                    "px-2 py-1 rounded-full text-xs font-black",
-                                                    sale.margin > 20 ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
-                                                        sale.margin > 0 ? "bg-orange-500/10 text-orange-600 border border-orange-500/20" :
-                                                            "bg-destructive/10 text-destructive border border-destructive/20"
-                                                )}>
-                                                    {sale.margin.toFixed(1)}%
-                                                </span>
-                                            </div>
-                                        </div>
+                                {stats.saleStats.map((sale, idx) => {
+                                    const originalSale = sales.find(s => s.id === sale.id)
+                                    const isFullyReturned = originalSale ? (originalSale.is_returned || (originalSale.items && originalSale.items.length > 0 && originalSale.items.every((item: any) =>
+                                        item.is_returned || (item.returned_quantity || 0) >= item.quantity
+                                    ))) : false
 
-                                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/50">
-                                            <div className="space-y-0.5 text-start">
-                                                <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-tight">{t('revenue.table.revenue')}</div>
-                                                <div className="text-sm font-black text-foreground">
-                                                    {formatCurrency(sale.revenue, sale.currency, features.iqd_display_preference)}
+                                    const returnedItemsCount = originalSale?.items?.filter((item: any) => item.is_returned).length || 0
+                                    const partialReturnedItemsCount = originalSale?.items?.filter((item: any) => (item.returned_quantity || 0) > 0 && !item.is_returned).length || 0
+                                    const hasAnyReturn = returnedItemsCount > 0 || partialReturnedItemsCount > 0
+                                    const totalReturnedQuantity = originalSale?.items?.reduce((sum: number, item: any) => {
+                                        if (item.is_returned) return sum + (item.quantity || 0)
+                                        if ((item.returned_quantity || 0) > 0) return sum + (item.returned_quantity || 0)
+                                        return sum
+                                    }, 0) || 0
+
+                                    return (
+                                        <div
+                                            key={sale.id || idx}
+                                            className={cn(
+                                                "p-4 rounded-[2rem] border border-border shadow-sm space-y-4",
+                                                isFullyReturned ? 'bg-destructive/5 border-destructive/20' : hasAnyReturn ? 'bg-orange-500/5 border-orange-500/20 dark:bg-orange-500/5 dark:border-orange-500/10' : 'bg-card'
+                                            )}
+                                            onClick={() => {
+                                                if (originalSale) setSelectedSale(originalSale)
+                                            }}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider">
+                                                        {formatDateTime(sale.date)}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-xs font-mono font-black text-primary">
+                                                            #{sale.id.split('-')[0]}
+                                                        </span>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Info className="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                {t('revenue.viewDetails') || 'View Sale Details'}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+
+                                                        {isFullyReturned && (
+                                                            <span className="px-1.5 py-0.5 text-[8px] font-bold bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive-foreground rounded-full border border-destructive/30 uppercase">
+                                                                {t('sales.return.returnedStatus') || 'RETURNED'}
+                                                            </span>
+                                                        )}
+
+                                                        {!isFullyReturned && hasAnyReturn && (
+                                                            <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-orange-500/10 text-orange-600 border border-orange-500/20 uppercase whitespace-nowrap">
+                                                                -{totalReturnedQuantity} {t('sales.return.returnedLabel') || 'returned'}
+                                                            </span>
+                                                        )}
+
+                                                        <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-secondary uppercase">
+                                                            {sale.origin}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className={cn(
+                                                        "px-2 py-1 rounded-full text-xs font-black",
+                                                        sale.margin > 20 ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
+                                                            sale.margin > 0 ? "bg-orange-500/10 text-orange-600 border border-orange-500/20" :
+                                                                "bg-destructive/10 text-destructive border border-destructive/20"
+                                                    )}>
+                                                        {sale.margin.toFixed(1)}%
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <div className="space-y-0.5 text-center">
-                                                <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-tight">{t('revenue.table.cost')}</div>
-                                                <div className="text-sm font-bold text-muted-foreground">
-                                                    {formatCurrency(sale.cost, sale.currency, features.iqd_display_preference)}
+
+                                            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/50">
+                                                <div className="space-y-0.5 text-start">
+                                                    <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-tight">{t('revenue.table.revenue')}</div>
+                                                    <div className="text-sm font-black text-foreground">
+                                                        {formatCurrency(sale.revenue, sale.currency, features.iqd_display_preference)}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="space-y-0.5 text-end">
-                                                <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-tight">{t('revenue.table.profit')}</div>
-                                                <div className="text-sm font-black text-emerald-600">
-                                                    {formatCurrency(sale.profit, sale.currency, features.iqd_display_preference)}
+                                                <div className="space-y-0.5 text-center">
+                                                    <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-tight">{t('revenue.table.cost')}</div>
+                                                    <div className="text-sm font-bold text-muted-foreground">
+                                                        {formatCurrency(sale.cost, sale.currency, features.iqd_display_preference)}
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-0.5 text-end">
+                                                    <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-tight">{t('revenue.table.profit')}</div>
+                                                    <div className="text-sm font-black text-emerald-600">
+                                                        {formatCurrency(sale.profit, sale.currency, features.iqd_display_preference)}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         ) : (
                             <Table>
@@ -461,69 +585,90 @@ export function Revenue() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {stats.saleStats.map((sale, idx) => (
-                                        <TableRow key={sale.id || idx}>
-                                            <TableCell className="text-start font-mono text-xs">
-                                                {formatDateTime(sale.date)}
-                                            </TableCell>
-                                            <TableCell className="text-start">
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            const originalSale = sales.find(s => s.id === sale.id)
-                                                            if (originalSale) setSelectedSale(originalSale)
-                                                        }}
-                                                        className="font-mono text-[10px] text-primary hover:underline"
-                                                    >
-                                                        {sale.id.split('-')[0]}
-                                                    </button>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Info
-                                                                className="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-                                                                onClick={() => {
-                                                                    const originalSale = sales.find(s => s.id === sale.id)
-                                                                    if (originalSale) setSelectedSale(originalSale)
-                                                                }}
-                                                            />
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            {t('revenue.viewDetails') || 'View Sale Details'}
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                    {sale.hasPartialReturn && (
-                                                        <span className="ms-2 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-orange-500/10 text-orange-600 border border-orange-500/20 uppercase">
-                                                            {t('sales.return.partialReturn')}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-start">
-                                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-secondary uppercase">
-                                                    {sale.origin}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-end font-medium">
-                                                {formatCurrency(sale.revenue, sale.currency, features.iqd_display_preference)}
-                                            </TableCell>
-                                            <TableCell className="text-end text-muted-foreground">
-                                                {formatCurrency(sale.cost, sale.currency, features.iqd_display_preference)}
-                                            </TableCell>
-                                            <TableCell className="text-end font-bold text-emerald-600">
-                                                {formatCurrency(sale.profit, sale.currency, features.iqd_display_preference)}
-                                            </TableCell>
-                                            <TableCell className="text-end">
-                                                <span className={cn(
-                                                    "px-2 py-0.5 rounded-full text-[10px] font-bold",
-                                                    sale.margin > 20 ? "bg-emerald-500/10 text-emerald-600" :
-                                                        sale.margin > 0 ? "bg-orange-500/10 text-orange-600" :
-                                                            "bg-destructive/10 text-destructive"
-                                                )}>
-                                                    {sale.margin.toFixed(1)}%
-                                                </span>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {stats.saleStats.map((sale, idx) => {
+                                        const originalSale = sales.find(s => s.id === sale.id)
+                                        const isFullyReturned = originalSale ? (originalSale.is_returned || (originalSale.items && originalSale.items.length > 0 && originalSale.items.every((item: any) =>
+                                            item.is_returned || (item.returned_quantity || 0) >= item.quantity
+                                        ))) : false
+
+                                        const returnedItemsCount = originalSale?.items?.filter((item: any) => item.is_returned).length || 0
+                                        const partialReturnedItemsCount = originalSale?.items?.filter((item: any) => (item.returned_quantity || 0) > 0 && !item.is_returned).length || 0
+                                        const hasAnyReturn = returnedItemsCount > 0 || partialReturnedItemsCount > 0
+                                        const totalReturnedQuantity = originalSale?.items?.reduce((sum: number, item: any) => {
+                                            if (item.is_returned) return sum + (item.quantity || 0)
+                                            if ((item.returned_quantity || 0) > 0) return sum + (item.returned_quantity || 0)
+                                            return sum
+                                        }, 0) || 0
+
+                                        return (
+                                            <TableRow key={sale.id || idx} className={isFullyReturned ? 'bg-destructive/10 border-destructive/20' : hasAnyReturn ? 'bg-orange-500/10 border-orange-500/20 dark:bg-orange-500/5 dark:border-orange-500/10' : ''}>
+                                                <TableCell className="text-start font-mono text-xs">
+                                                    {formatDateTime(sale.date)}
+                                                </TableCell>
+                                                <TableCell className="text-start">
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                if (originalSale) setSelectedSale(originalSale)
+                                                            }}
+                                                            className="font-mono text-[10px] text-primary hover:underline"
+                                                        >
+                                                            {sale.id.split('-')[0]}
+                                                        </button>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Info
+                                                                    className="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                                                                    onClick={() => {
+                                                                        if (originalSale) setSelectedSale(originalSale)
+                                                                    }}
+                                                                />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                {t('revenue.viewDetails') || 'View Sale Details'}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+
+                                                        {isFullyReturned && (
+                                                            <span className="px-1.5 py-0.5 text-[8px] font-bold bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive-foreground rounded-full border border-destructive/30 uppercase">
+                                                                {t('sales.return.returnedStatus') || 'RETURNED'}
+                                                            </span>
+                                                        )}
+
+                                                        {!isFullyReturned && hasAnyReturn && (
+                                                            <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-orange-500/10 text-orange-600 border border-orange-500/20 uppercase whitespace-nowrap">
+                                                                -{totalReturnedQuantity} {t('sales.return.returnedLabel') || 'returned'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-start">
+                                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-secondary uppercase">
+                                                        {sale.origin}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-end font-medium">
+                                                    {formatCurrency(sale.revenue, sale.currency, features.iqd_display_preference)}
+                                                </TableCell>
+                                                <TableCell className="text-end text-muted-foreground">
+                                                    {formatCurrency(sale.cost, sale.currency, features.iqd_display_preference)}
+                                                </TableCell>
+                                                <TableCell className="text-end font-bold text-emerald-600">
+                                                    {formatCurrency(sale.profit, sale.currency, features.iqd_display_preference)}
+                                                </TableCell>
+                                                <TableCell className="text-end">
+                                                    <span className={cn(
+                                                        "px-2 py-0.5 rounded-full text-[10px] font-bold",
+                                                        sale.margin > 20 ? "bg-emerald-500/10 text-emerald-600" :
+                                                            sale.margin > 0 ? "bg-orange-500/10 text-orange-600" :
+                                                                "bg-destructive/10 text-destructive"
+                                                    )}>
+                                                        {sale.margin.toFixed(1)}%
+                                                    </span>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
                                 </TableBody>
                             </Table>
                         )}
@@ -545,6 +690,38 @@ export function Revenue() {
                     currency={Object.keys(stats.statsByCurrency)[0] || features.default_currency || 'usd'}
                     iqdPreference={features.iqd_display_preference}
                     data={stats.statsByCurrency}
+                />
+
+                {/* Top Products Modal */}
+                <TopProductsModal
+                    isOpen={isTopProductsOpen}
+                    onClose={() => setIsTopProductsOpen(false)}
+                    data={stats.statsByCurrency}
+                    iqdPreference={features.iqd_display_preference}
+                />
+
+                {/* Sales Overview Modal */}
+                <SalesOverviewModal
+                    isOpen={isSalesOverviewOpen}
+                    onClose={() => setIsSalesOverviewOpen(false)}
+                    data={stats.statsByCurrency}
+                    iqdPreference={features.iqd_display_preference}
+                />
+
+                {/* Peak Trading Times Modal */}
+                <PeakTradingModal
+                    isOpen={isPeakTradingOpen}
+                    onClose={() => setIsPeakTradingOpen(false)}
+                    sales={sales}
+                />
+
+                {/* Returns Analysis Modal */}
+                <ReturnsAnalysisModal
+                    isOpen={isReturnsOpen}
+                    onClose={() => setIsReturnsOpen(false)}
+                    sales={sales}
+                    iqdPreference={features.iqd_display_preference}
+                    defaultCurrency={features.default_currency || 'usd'}
                 />
             </div>
         </TooltipProvider>

@@ -29,7 +29,8 @@ import {
     SelectTrigger,
     SelectValue,
     CurrencySelector,
-    Switch
+    Switch,
+    DeleteConfirmationModal
 } from '@/ui/components'
 import { Plus, Pencil, Trash2, Package, Search, ImagePlus, Info, Settings, LayoutGrid, List as ListIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -100,6 +101,8 @@ export function Products() {
     const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
         return (localStorage.getItem('products_view_mode') as 'table' | 'grid') || 'table'
     })
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string, type: 'product' | 'category' } | null>(null)
 
     useEffect(() => {
         setIsElectron(isTauri());
@@ -326,15 +329,31 @@ export function Products() {
         setIsCategoryDialogOpen(true)
     }
 
-    const handleDeleteCategory = async (id: string) => {
-        if (confirm(t('categories.messages.deleteConfirm'))) {
-            await deleteCategory(id)
-        }
+    const handleDeleteCategory = (category: Category) => {
+        setItemToDelete({ id: category.id, name: category.name, type: 'category' })
+        setDeleteModalOpen(true)
     }
 
-    const handleDelete = async (id: string) => {
-        if (confirm(t('products.messages.deleteConfirm') || 'Are you sure you want to delete this product?')) {
-            await deleteProduct(id)
+    const handleDelete = (product: Product) => {
+        setItemToDelete({ id: product.id, name: product.name, type: 'product' })
+        setDeleteModalOpen(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return
+        setIsLoading(true)
+        try {
+            if (itemToDelete.type === 'product') {
+                await deleteProduct(itemToDelete.id)
+            } else {
+                await deleteCategory(itemToDelete.id)
+            }
+            setDeleteModalOpen(false)
+            setItemToDelete(null)
+        } catch (error) {
+            console.error('Error deleting:', error)
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -477,7 +496,7 @@ export function Products() {
                                                             variant="ghost"
                                                             size="icon"
                                                             className="rounded-xl h-10 w-10 text-destructive hover:bg-destructive/5"
-                                                            onClick={() => handleDelete(product.id)}
+                                                            onClick={() => handleDelete(product)}
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </Button>
@@ -559,7 +578,7 @@ export function Products() {
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         className="w-8 h-8 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors"
-                                                                        onClick={() => handleDelete(product.id)}
+                                                                        onClick={() => handleDelete(product)}
                                                                     >
                                                                         <Trash2 className="w-3.5 h-3.5" />
                                                                     </Button>
@@ -618,7 +637,7 @@ export function Products() {
                                                                             </Button>
                                                                         )}
                                                                         {canDelete && (
-                                                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
+                                                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(product)}>
                                                                                 <Trash2 className="w-4 h-4 text-destructive" />
                                                                             </Button>
                                                                         )}
@@ -931,7 +950,7 @@ export function Products() {
                                                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleOpenCategoryDialog(cat)}>
                                                     <Pencil className="h-3 w-3" />
                                                 </Button>
-                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCategory(cat.id)}>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCategory(cat)}>
                                                     <Trash2 className="h-3 w-3" />
                                                 </Button>
                                             </div>
@@ -1046,6 +1065,16 @@ export function Products() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog >
+
+            <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                itemName={itemToDelete?.name}
+                isLoading={isLoading}
+                title={itemToDelete?.type === 'category' ? t('categories.confirmDelete') : t('products.confirmDelete')}
+                description={itemToDelete?.type === 'category' ? t('categories.deleteWarning') : t('products.deleteWarning')}
+            />
         </div >
     )
 }

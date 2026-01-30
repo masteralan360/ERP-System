@@ -33,26 +33,60 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
 
     if (!sale) return null
 
+    const isFullyReturned = sale.is_returned || (sale.items && sale.items.length > 0 && sale.items.every(item =>
+        item.is_returned || (item.returned_quantity || 0) >= item.quantity
+    ))
+
     const returnedItemsCount = sale.items?.filter(item => item.is_returned).length || 0
     const partialReturnedItemsCount = sale.items?.filter(item => (item.returned_quantity || 0) > 0 && !item.is_returned).length || 0
     const hasAnyReturn = returnedItemsCount > 0 || partialReturnedItemsCount > 0
 
+    const netTotal = (() => {
+        if (sale.is_returned) return 0
+        if (sale.items && sale.items.length > 0) {
+            const allItemsReturned = sale.items.every(item =>
+                item.is_returned || (item.returned_quantity || 0) >= item.quantity
+            )
+            if (allItemsReturned) return 0
+
+            return sale.items.reduce((sum, item) => {
+                const quantity = item.quantity || 0
+                const returnedQty = item.returned_quantity || 0
+                const remainingQty = Math.max(0, quantity - returnedQty)
+
+                if (remainingQty <= 0) return sum
+
+                const unitPrice = item.converted_unit_price || item.unit_price || 0
+                return sum + (unitPrice * remainingQty)
+            }, 0)
+        }
+        return sale.total_amount
+    })()
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
+            <DialogContent className={cn(
+                "max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto",
+                "rounded-[2.5rem] border-[3px] border-primary/50 shadow-2xl transition-all duration-500"
+            )}>
                 <DialogHeader>
                     <DialogTitle>{t('sales.details') || 'Sale Details'}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                     {sale.system_review_status === 'flagged' && (
-                        <div className="p-3 bg-orange-100 border border-orange-200 dark:bg-orange-500/10 dark:border-orange-500/20 rounded-lg">
-                            <div className="flex items-start gap-2 text-orange-800 dark:text-orange-400">
-                                <span className="text-lg">⚠️</span>
+                        <div className="relative p-4 overflow-hidden bg-orange-500/10 border border-orange-500/20 rounded-2xl group transition-all duration-300 hover:bg-orange-500/15">
+                            <div className="absolute top-0 right-0 p-2 opacity-10 flex items-center justify-center pointer-events-none">
+                                <span className="text-4xl">⚠️</span>
+                            </div>
+                            <div className="flex items-start gap-4 relative z-10">
+                                <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-600 dark:text-orange-400">
+                                    <span className="text-xl">⚠️</span>
+                                </div>
                                 <div className="space-y-1">
-                                    <span className="font-bold text-sm block uppercase tracking-wide">
+                                    <span className="font-black text-xs block uppercase tracking-[0.1em] text-orange-600 dark:text-orange-400">
                                         {t('sales.flagged') || 'System Review Flagged'}
                                     </span>
-                                    <p className="text-sm opacity-90">
+                                    <p className="text-sm font-medium text-orange-950/80 dark:text-orange-200/80 leading-relaxed">
                                         {sale.system_review_reason || 'Inconsistent checkout data detected.'}
                                     </p>
                                 </div>
@@ -60,37 +94,49 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
                         </div>
                     )}
 
-                    {sale.is_returned && (
-                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                            <div className="flex items-center gap-2 text-destructive dark:text-destructive-foreground">
-                                <XCircle className="w-5 h-5" />
-                                <span className="font-medium">{t('sales.return.returnedMessage') || 'This sale has been returned'}</span>
+                    {isFullyReturned && (
+                        <div className="relative p-4 overflow-hidden bg-destructive/10 border border-destructive/20 rounded-2xl group transition-all duration-300 hover:bg-destructive/15">
+                            <div className="flex items-center gap-4 relative z-10 text-destructive dark:text-destructive-foreground">
+                                <div className="p-3 rounded-xl bg-destructive/20 flex items-center justify-center">
+                                    <XCircle className="w-6 h-6" />
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="font-black text-xs block uppercase tracking-[0.1em]">
+                                        {t('sales.return.returnedStatus') || 'Fully Returned'}
+                                    </span>
+                                    <p className="text-base font-bold">
+                                        {t('sales.return.returnedMessage') || 'This sale has been returned'}
+                                    </p>
+                                    <div className="flex flex-col gap-0.5 opacity-80">
+                                        {sale.return_reason && (
+                                            <p className="text-xs font-semibold">
+                                                {t('sales.return.reason') || 'Reason'}: {sale.return_reason}
+                                            </p>
+                                        )}
+                                        {sale.returned_at && (
+                                            <p className="text-[10px] font-medium opacity-60">
+                                                {t('sales.return.returnedAt') || 'Returned at'}: {formatDateTime(sale.returned_at)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            {sale.return_reason && (
-                                <p className="text-sm text-destructive/80 dark:text-destructive-foreground/80 mt-1">
-                                    {t('sales.return.reason') || 'Reason'}: {sale.return_reason}
-                                </p>
-                            )}
-                            {sale.returned_at && (
-                                <p className="text-xs text-destructive/60 dark:text-destructive-foreground/60 mt-1">
-                                    {t('sales.return.returnedAt') || 'Returned at'}: {formatDateTime(sale.returned_at)}
-                                </p>
-                            )}
                         </div>
                     )}
 
-                    {!sale.is_returned && hasAnyReturn && (
-                        <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-                            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                    {!isFullyReturned && hasAnyReturn && (
+                        <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                            <div className="p-2 rounded-lg bg-orange-500/20 text-orange-600 dark:text-orange-400">
                                 <RotateCcw className="w-4 h-4" />
-                                <span className="font-medium text-sm">
-                                    {t('sales.return.partialReturnDetected') || 'This sale has partial returns.'}
-                                </span>
                             </div>
+                            <span className="font-bold text-xs uppercase tracking-wide text-orange-600 dark:text-orange-400">
+                                {t('sales.return.partialReturnDetected') || 'This sale has partial returns.'}
+                            </span>
                         </div>
                     )}
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
+                        {/* ... Info content stays same ... */}
                         <div>
                             <span className="text-muted-foreground">{t('sales.date')}:</span>
                             <div className="font-medium">{formatDateTime(sale.created_at)}</div>
@@ -187,7 +233,7 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
                         )}
                     </div>
 
-                    <div className="border rounded-xl overflow-hidden">
+                    <div className="border rounded-xl font-medium overflow-hidden">
                         {isMobile() ? (
                             <div className="divide-y divide-border">
                                 {sale.items?.map((item) => {
@@ -207,8 +253,10 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
                                         <div
                                             key={item.id}
                                             className={cn(
-                                                "p-4 space-y-3",
-                                                isItemReturned ? 'bg-destructive/5' : hasItemPartialReturn ? 'bg-orange-500/5' : ''
+                                                "p-4 space-y-3 transition-colors duration-300",
+                                                isItemReturned ? 'bg-destructive/5 border-l-4 border-destructive' :
+                                                    hasItemPartialReturn ? 'bg-orange-500/5 border-l-4 border-orange-500' :
+                                                        'hover:bg-muted/30 border-l-4 border-transparent'
                                             )}
                                         >
                                             <div className="flex justify-between items-start gap-2">
@@ -361,7 +409,12 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
                                         return (
                                             <TableRow
                                                 key={item.id}
-                                                className={isItemReturned ? 'bg-destructive/5 opacity-75' : hasItemPartialReturn ? 'bg-orange-500/5' : ''}
+                                                className={cn(
+                                                    "transition-colors duration-300",
+                                                    isItemReturned ? 'bg-destructive/5 opacity-80' :
+                                                        hasItemPartialReturn ? 'bg-orange-500/5' :
+                                                            'hover:bg-muted/30'
+                                                )}
                                             >
                                                 <TableCell className="text-start">
                                                     <div className="flex items-center gap-2">
@@ -482,12 +535,19 @@ export function SaleDetailsModal({ sale, isOpen, onClose, onReturnItem }: SaleDe
                         <div className="text-lg font-bold uppercase tracking-tight opacity-70">
                             {t('sales.total')} ({sale.settlement_currency || 'usd'})
                         </div>
-                        <div className="text-3xl font-black text-primary">
-                            {formatCurrency(sale.total_amount, sale.settlement_currency || 'usd', features.iqd_display_preference)}
+                        <div className="flex items-center gap-3">
+                            {hasAnyReturn && (
+                                <span className="text-xl font-bold text-muted-foreground line-through opacity-40 tabular-nums">
+                                    {formatCurrency(sale.total_amount, sale.settlement_currency || 'usd', features.iqd_display_preference)}
+                                </span>
+                            )}
+                            <div className="text-3xl font-black text-primary tabular-nums drop-shadow-sm">
+                                {formatCurrency(netTotal, sale.settlement_currency || 'usd', features.iqd_display_preference)}
+                            </div>
                         </div>
                     </div>
                 </div>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     )
 }

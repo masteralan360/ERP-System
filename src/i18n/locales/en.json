@@ -19,6 +19,9 @@
         "error": "Error",
         "success": "Success",
         "noData": "No data available",
+        "confirmDelete": "Confirm Deletion",
+        "deleteWarning": "This action is irreversible. Are you sure you want to proceed?",
+        "targetItem": "Item to delete",
         "quantity": "Quantity",
         "price": "Price",
         "total": "Total",
@@ -49,7 +52,8 @@
             "discard": "Discard Changes",
             "continue": "Continue Editing"
         },
-        "exchangeRates": "Live Exchange Rates"
+        "exchangeRates": "Live Exchange Rates",
+        "sales": "Sales"
     },
     "messages": {
         "saleCompleted": "Sale completed successfully",
@@ -144,7 +148,9 @@
             "updateSuccess": "Product updated successfully",
             "deleteSuccess": "Product deleted successfully",
             "deleteConfirm": "Are you sure you want to delete this product?"
-        }
+        },
+        "confirmDelete": "Delete Product",
+        "deleteWarning": "Deleting this product will remove it from inventory. This cannot be undone."
     },
     "customers": {
         "title": "Customers",
@@ -173,7 +179,9 @@
             "updateSuccess": "Customer updated successfully",
             "deleteSuccess": "Customer deleted successfully",
             "deleteConfirm": "Are you sure you want to delete this customer?"
-        }
+        },
+        "confirmDelete": "Delete Customer",
+        "deleteWarning": "All customer data and transaction history will be permanently removed."
     },
     "orders": {
         "title": "Orders",
@@ -220,7 +228,9 @@
         },
         "messages": {
             "deleteConfirm": "Are you sure you want to delete this order?"
-        }
+        },
+        "confirmDelete": "Delete Order",
+        "deleteWarning": "This will permanently remove the order record. Associated invoices should be checked."
     },
     "invoices": {
         "title": "Invoices",
@@ -260,7 +270,9 @@
         },
         "messages": {
             "deleteConfirm": "Are you sure you want to delete this invoice?"
-        }
+        },
+        "confirmDelete": "Delete Invoice",
+        "deleteWarning": "Deleting this invoice will remove the financial record. The underlying order will remain."
     },
     "auth": {
         "systemName": "Asas System",
@@ -302,7 +314,9 @@
             "admin": "Admin",
             "staff": "Staff",
             "viewer": "Viewer"
-        }
+        },
+        "confirmDeleteUser": "Delete User Account",
+        "deleteUserWarning": "This will permanently delete the user and their associated data. This action cannot be undone."
     },
     "dashboard": {
         "title": "Dashboard",
@@ -346,6 +360,7 @@
         "theme": {
             "title": "Theme Preference",
             "style": "Theme Style",
+            "primary": "Primary",
             "modern": "Modern (Premium)",
             "legacy": "Legacy (Classic)",
             "light": "Light",
@@ -582,7 +597,9 @@
                 "duplicateSale": "Duplicate sale",
                 "other": "Other"
             }
-        }
+        },
+        "confirmDelete": "Delete Sale",
+        "deleteWarning": "Deleting this sale will permanently remove the record and restore the items to inventory. This cannot be undone."
     },
     "receipt": {
         "thankYou": "Thank you for shopping with us!",
@@ -605,10 +622,13 @@
             "deleteSuccess": "Category deleted successfully",
             "deleteConfirm": "Are you sure you want to delete this category? Products will remain but will have no category.",
             "duplicateName": "A category with this name already exists."
-        }
+        },
+        "confirmDelete": "Delete Category",
+        "deleteWarning": "Deleting this category will unassign it from all products. The products will remain in stock."
     },
     "revenue": {
         "title": "Revenue Analytics",
+        "listTitle": "Revenue List",
         "subtitle": "Track your sales performance and profitability",
         "grossRevenue": "Gross Revenue",
         "totalCost": "Total Cost (COGS)",
@@ -620,6 +640,39 @@
         "topPerforming": "Top Performing Products",
         "highestCost": "Highest Cost Products",
         "targetCurrency": "Display Currency",
+        "topProducts": "Top Products",
+        "topProductsDesc": "Best sellers by revenue, quantity, or cost",
+        "productPerformance": "Product performance analysis",
+        "top10": "Top 10 Products",
+        "filter": {
+            "revenue": "Revenue",
+            "quantity": "Quantity",
+            "cost": "Cost"
+        },
+        "salesOverview": "Sales Overview",
+        "salesOverviewDesc": "Combined revenue, cost & profit trends",
+        "combinedTrends": "Combined revenue, cost & profit trends",
+        "dailyTrend": "Daily Trends",
+        "peakTimes": "Peak Trading Times",
+        "peakTimesDesc": "Sales distribution by hour of day",
+        "peakHour": "Peak Hour",
+        "totalTransactions": "Total Transactions",
+        "transactions": "Transactions",
+        "hourly": "Hourly",
+        "heatmap": "Heatmap",
+        "weeklyHeatmap": "Weekly Heatmap",
+        "less": "Less",
+        "more": "More",
+        "salesCount": "Sales",
+        "hourlyDistribution": "Hourly Distribution",
+        "returns": "Returns Analysis",
+        "returnsDesc": "Track refunds and product returns",
+        "totalReturns": "Total Returns",
+        "refundedAmount": "Refunded Amount",
+        "returnRate": "Return Rate",
+        "returnTrend": "Return Trend",
+        "topReturned": "Top Returned Products",
+        "noReturns": "No returns recorded",
         "table": {
             "date": "Date",
             "revenue": "Revenue",
@@ -660,7 +713,9 @@
             "share": "Sales Share (%)",
             "basis": "Based on number of sales",
             "trend": "Sales Volume Trend",
+            "trendCount": "Sales Count Trend",
             "revenueTrendDesc": "Revenue contribution over time (USD)",
+            "salesTrendDesc": "Transaction volume across team members",
             "cumulative": "Cumulative Sales"
         },
         "form": {

@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     name TEXT,
     role TEXT,
     workspace_id UUID REFERENCES public.workspaces(id),
+    monthly_target NUMERIC DEFAULT 0,
+    profile_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -22,6 +24,15 @@ CREATE POLICY "Users can view profiles in their workspace" ON public.profiles
 -- Users can update their own profile
 CREATE POLICY "Users can update their own profile" ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
+
+-- Admins can update profiles in their workspace
+CREATE POLICY "Admins can update profiles in their workspace" ON public.profiles
+    FOR UPDATE 
+    USING (
+        (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' 
+        AND 
+        workspace_id = (auth.jwt() -> 'user_metadata' ->> 'workspace_id')::uuid
+    );
 
 -- 4. Automatic Profile Creation Trigger
 CREATE OR REPLACE FUNCTION public.handle_new_user()

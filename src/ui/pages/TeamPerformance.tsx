@@ -62,6 +62,7 @@ interface StaffPerformance {
     target: number
     progress: number
     dailySales: Record<string, number>
+    dailySalesCount: Record<string, number>
 }
 
 export function TeamPerformance() {
@@ -177,7 +178,8 @@ export function TeamPerformance() {
                 revenueByCurrency: {},
                 target: m.monthlyTarget || 0,
                 progress: 0,
-                dailySales: {}
+                dailySales: {},
+                dailySalesCount: {}
             }
         })
 
@@ -218,19 +220,22 @@ export function TeamPerformance() {
                 }
             }
 
-            // Global Daily Trend by Currency (Original & Normalized)
+            // Global Daily Trend by Member (Sales Count)
             const date = new Date(sale.created_at).toISOString().split('T')[0]
-            if (!globalDailyTrend[date]) globalDailyTrend[date] = {}
+            if (!globalDailyTrend[date]) {
+                globalDailyTrend[date] = {}
+                // Initialize all tracked members to 0 for this date
+                Object.keys(perfMap).forEach(mid => {
+                    globalDailyTrend[date][mid] = 0
+                })
+            }
 
-            // Original amount (for tooltip/display)
-            globalDailyTrend[date][currency] = (globalDailyTrend[date][currency] || 0) + sale.total_amount
-
-            // Normalized amount (for graph scaling)
-            const normalizedKey = `${currency}_normalized`
-            globalDailyTrend[date][normalizedKey] = (globalDailyTrend[date][normalizedKey] || 0) + revenueInDefault
+            // Member-based count (for graph)
+            globalDailyTrend[date][cashierId] = (globalDailyTrend[date][cashierId] || 0) + 1
 
             perfMap[cashierId].totalRevenue += revenueInDefault
             perfMap[cashierId].dailySales[date] = (perfMap[cashierId].dailySales[date] || 0) + revenueInDefault
+            perfMap[cashierId].dailySalesCount[date] = (perfMap[cashierId].dailySalesCount[date] || 0) + 1
         })
 
         // Finalize progress
@@ -242,7 +247,10 @@ export function TeamPerformance() {
         })
 
         return {
-            performanceData: Object.values(perfMap).sort((a, b) => b.totalRevenue - a.totalRevenue),
+            performanceData: Object.values(perfMap).sort((a, b) => {
+                if (b.salesCount !== a.salesCount) return b.salesCount - a.salesCount
+                return b.totalRevenue - a.totalRevenue
+            }),
             statsByCurrency,
             globalDailyTrend
         }
@@ -279,12 +287,6 @@ export function TeamPerformance() {
             .sort((a, b) => a.date.localeCompare(b.date))
     }, [globalDailyTrend])
 
-    const CURRENCY_COLORS: Record<string, string> = {
-        usd: '#3b82f6', // Blue
-        iqd: '#10b981', // Emerald
-        eur: '#8b5cf6', // Violet
-        try: '#f59e0b'  // Amber
-    }
 
     const handleUpdateTarget = async () => {
         if (!selectedMember) return
@@ -602,20 +604,20 @@ export function TeamPerformance() {
                 <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-primary" />
-                        {t('performance.charts.trend')}
+                        {t('performance.charts.trendCount') || 'Sales Count Trend'}
                     </CardTitle>
-                    <p className="text-xs text-muted-foreground">{t('performance.charts.revenueTrendDesc')}</p>
+                    <p className="text-xs text-muted-foreground">{t('performance.charts.salesTrendDesc') || 'Transaction volume across team members'}</p>
                 </CardHeader>
                 <CardContent className="h-[400px]">
                     <div className="flex flex-wrap gap-4 mb-4 px-2">
-                        {Object.keys(statsByCurrency).map(curr => (
-                            <div key={curr} className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded-lg border border-border/50">
+                        {performanceData.map((p, idx) => (
+                            <div key={p.id} className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded-lg border border-border/50">
                                 <div
                                     className="w-2 h-2 rounded-full"
-                                    style={{ backgroundColor: CURRENCY_COLORS[curr] || '#94a3b8' }}
+                                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
                                 />
                                 <span className="text-[10px] font-black uppercase tracking-tight opacity-70">
-                                    {curr}
+                                    {p.name}
                                 </span>
                             </div>
                         ))}
@@ -623,10 +625,10 @@ export function TeamPerformance() {
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
-                                {Object.keys(statsByCurrency).map(curr => (
-                                    <linearGradient key={`grad-${curr}`} id={`color-${curr}`} x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor={CURRENCY_COLORS[curr] || '#94a3b8'} stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor={CURRENCY_COLORS[curr] || '#94a3b8'} stopOpacity={0} />
+                                {performanceData.map((p, idx) => (
+                                    <linearGradient key={`grad-${p.id}`} id={`color-${p.id}`} x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={COLORS[idx % COLORS.length]} stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor={COLORS[idx % COLORS.length]} stopOpacity={0} />
                                     </linearGradient>
                                 ))}
                             </defs>
@@ -645,7 +647,7 @@ export function TeamPerformance() {
                                 tickLine={false}
                                 tick={{ fontSize: 10, fontWeight: 700, fill: 'currentColor' }}
                                 className="text-muted-foreground/60"
-                                tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
+                                allowDecimals={false}
                             />
                             <Tooltip
                                 contentStyle={{
@@ -657,27 +659,23 @@ export function TeamPerformance() {
                                 }}
                                 itemStyle={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 0' }}
                                 labelStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.6 }}
-                                formatter={(value: any, name: any, props: any) => {
-                                    // Extract currency from normalized key (e.g., "iqd_normalized" -> "iqd")
-                                    const curr = String(name).replace('_normalized', '')
-                                    // Get original value from payload if available
-                                    const originalValue = props.payload[curr] || value
-
+                                formatter={(value: any, name: any) => {
+                                    const member = performanceData.find(p => p.id === name)
                                     return [
-                                        formatCurrency(originalValue, curr.toLowerCase() as any, features.iqd_display_preference),
-                                        curr.toUpperCase()
+                                        `${value} ${t('common.sales') || 'sales'}`,
+                                        member?.name || name
                                     ]
                                 }}
                             />
-                            {Object.keys(statsByCurrency).map(curr => (
+                            {performanceData.map((p, idx) => (
                                 <Area
-                                    key={curr}
+                                    key={p.id}
                                     type="monotone"
-                                    dataKey={`${curr}_normalized`}
-                                    stroke={CURRENCY_COLORS[curr] || '#94a3b8'}
+                                    dataKey={p.id}
+                                    stroke={COLORS[idx % COLORS.length]}
                                     strokeWidth={3}
                                     fillOpacity={1}
-                                    fill={`url(#color-${curr})`}
+                                    fill={`url(#color-${p.id})`}
                                     animationDuration={1500}
                                 />
                             ))}

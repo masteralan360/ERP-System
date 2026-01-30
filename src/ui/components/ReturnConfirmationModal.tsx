@@ -78,7 +78,10 @@ export function ReturnConfirmationModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto dark:bg-zinc-950/90 backdrop-blur-xl border-zinc-200 dark:border-zinc-800 shadow-2xl animate-in fade-in zoom-in duration-300">
+            <DialogContent className={cn(
+                "max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in duration-300",
+                "rounded-[2rem] border-[3px] border-primary/50 bg-background/95 backdrop-blur-3xl"
+            )}>
                 <DialogHeader>
                     <DialogTitle className="text-xl font-black text-foreground tracking-tight flex items-center gap-2">
                         <RotateCcw className="w-5 h-5 text-primary" />

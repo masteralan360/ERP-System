@@ -25,7 +25,8 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue
+    SelectValue,
+    DeleteConfirmationModal
 } from '@/ui/components'
 import { Plus, Pencil, Trash2, FileText, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -53,6 +54,8 @@ export function Invoices() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null)
     const workspaceId = user?.workspaceId || ''
 
     // Form state
@@ -127,9 +130,22 @@ export function Invoices() {
         }
     }
 
-    const handleDelete = async (id: string) => {
-        if (confirm(t('invoices.messages.deleteConfirm') || 'Are you sure you want to delete this invoice?')) {
-            await deleteInvoice(id)
+    const handleDelete = (invoice: Invoice) => {
+        setInvoiceToDelete(invoice)
+        setDeleteModalOpen(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!invoiceToDelete) return
+        setIsLoading(true)
+        try {
+            await deleteInvoice(invoiceToDelete.id)
+            setDeleteModalOpen(false)
+            setInvoiceToDelete(null)
+        } catch (error) {
+            console.error('Error deleting invoice:', error)
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -241,7 +257,7 @@ export function Invoices() {
                                                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(invoice)}>
                                                         <Pencil className="w-4 h-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(invoice.id)}>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(invoice)}>
                                                         <Trash2 className="w-4 h-4 text-destructive" />
                                                     </Button>
                                                 </div>
@@ -347,6 +363,16 @@ export function Invoices() {
                     </form>
                 </DialogContent>
             </Dialog>
-        </div>
+
+            <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                itemName={invoiceToDelete?.invoiceNumber}
+                isLoading={isLoading}
+                title={t('invoices.confirmDelete')}
+                description={t('invoices.deleteWarning')}
+            />
+        </div >
     )
 }

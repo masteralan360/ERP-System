@@ -20,7 +20,8 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
-    Textarea
+    Textarea,
+    DeleteConfirmationModal
 } from '@/ui/components'
 import { Plus, Pencil, Trash2, Users, Search, Mail, Phone, MapPin } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -49,6 +50,8 @@ export function Customers() {
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
     const [formData, setFormData] = useState<CustomerFormData>(initialFormData)
     const [isLoading, setIsLoading] = useState(false)
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
 
     const filteredCustomers = customers.filter(
         (c) =>
@@ -95,9 +98,22 @@ export function Customers() {
         }
     }
 
-    const handleDelete = async (id: string) => {
-        if (confirm(t('customers.messages.deleteConfirm') || 'Are you sure you want to delete this customer?')) {
-            await deleteCustomer(id)
+    const handleDelete = (customer: Customer) => {
+        setCustomerToDelete(customer)
+        setDeleteModalOpen(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!customerToDelete) return
+        setIsLoading(true)
+        try {
+            await deleteCustomer(customerToDelete.id)
+            setDeleteModalOpen(false)
+            setCustomerToDelete(null)
+        } catch (error) {
+            console.error('Error deleting customer:', error)
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -180,7 +196,7 @@ export function Customers() {
                                                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(customer)}>
                                                         <Pencil className="w-4 h-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(customer.id)}>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(customer)}>
                                                         <Trash2 className="w-4 h-4 text-destructive" />
                                                     </Button>
                                                 </div>
@@ -293,6 +309,16 @@ export function Customers() {
                     </form>
                 </DialogContent>
             </Dialog>
-        </div>
+
+            <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                itemName={customerToDelete?.name}
+                isLoading={isLoading}
+                title={t('customers.confirmDelete')}
+                description={t('customers.deleteWarning')}
+            />
+        </div >
     )
 }

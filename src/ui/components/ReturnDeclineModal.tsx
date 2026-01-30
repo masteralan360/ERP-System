@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 import {
     Dialog,
     DialogContent,
@@ -22,7 +23,10 @@ export function ReturnDeclineModal({ isOpen, onClose, products, returnableProduc
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto border-destructive/30 shadow-2xl shadow-destructive/10 dark:shadow-destructive/20 dark:bg-zinc-950/90 backdrop-blur-xl animate-in fade-in zoom-in duration-300">
+            <DialogContent className={cn(
+                "max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto shadow-2xl transition-all duration-500",
+                "rounded-[2rem] border-[3px] border-destructive/50 bg-background/95 backdrop-blur-3xl"
+            )}>
                 <DialogHeader className="space-y-2">
                     <DialogTitle className="flex items-center gap-2 text-xl font-black text-destructive dark:drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]">
                         <AlertCircle className="w-8 h-8" />

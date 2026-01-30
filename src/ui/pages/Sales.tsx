@@ -30,7 +30,8 @@ import {
     SelectTrigger,
     SelectValue,
     PrintSelectionModal,
-    A4InvoiceTemplate
+    A4InvoiceTemplate,
+    DeleteConfirmationModal
 } from '@/ui/components'
 import { SaleItem } from '@/types'
 import {
@@ -62,6 +63,39 @@ export function Sales() {
         return localStorage.getItem('sales_selected_cashier') || 'all'
     })
     const [availableCashiers, setAvailableCashiers] = useState<Array<{ id: string; name: string }>>([])
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null)
+
+    const getEffectiveTotal = (sale: Sale) => {
+        // If the sale itself is marked returned
+        if (sale.is_returned) return 0
+
+        // If items are present, calculate sum of remaining (non-returned) value
+        if (sale.items && sale.items.length > 0) {
+            // Check if all items are fully returned (fail-safe)
+            const allItemsReturned = sale.items.every(item =>
+                item.is_returned || (item.returned_quantity || 0) >= item.quantity
+            )
+            if (allItemsReturned) return 0
+
+            return sale.items.reduce((sum, item) => {
+                const quantity = item.quantity || 0
+                const returnedQty = item.returned_quantity || 0
+                const remainingQty = Math.max(0, quantity - returnedQty)
+
+                if (remainingQty <= 0) return sum
+
+                // Use converted_unit_price as it's already in the settlement currency
+                // Revenue.tsx uses: itemRevenue = item.converted_unit_price * netQuantity
+                const unitPrice = item.converted_unit_price || item.unit_price || 0
+
+                return sum + (unitPrice * remainingQty)
+            }, 0)
+        }
+
+        return sale.total_amount
+    }
+
     const [rulesQueue, setRulesQueue] = useState<Array<{ productName: string; rules: string }>>([])
     const [currentRuleIndex, setCurrentRuleIndex] = useState(-1)
     const [showDeclineModal, setShowDeclineModal] = useState(false)
@@ -182,18 +216,27 @@ export function Sales() {
         }
     }, [printingSale])
 
-    const handleDeleteSale = async (id: string) => {
-        if (!confirm(t('common.messages.deleteConfirm') || 'Are you sure you want to delete this sale? Inventory will be restored.')) return
+    const handleDeleteSale = (sale: Sale) => {
+        setSaleToDelete(sale)
+        setDeleteModalOpen(true)
+    }
 
+    const confirmDeleteSale = async () => {
+        if (!saleToDelete) return
+        setIsLoading(true)
         try {
-            const { error } = await supabase.rpc('delete_sale', { p_sale_id: id })
+            const { error } = await supabase.rpc('delete_sale', { p_sale_id: saleToDelete.id })
             if (error) throw error
 
-            setSales(sales.filter(s => s.id !== id))
-            if (selectedSale?.id === id) setSelectedSale(null)
+            setSales(sales.filter(s => s.id !== saleToDelete.id))
+            if (selectedSale?.id === saleToDelete.id) setSelectedSale(null)
+            setDeleteModalOpen(false)
+            setSaleToDelete(null)
         } catch (err: any) {
             console.error('Error deleting sale:', err)
             alert('Failed to delete sale: ' + (err.message || 'Unknown error'))
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -607,6 +650,9 @@ export function Sales() {
                     ) : isMobile() ? (
                         <div className="grid grid-cols-1 gap-4">
                             {sales.map((sale) => {
+                                const isFullyReturned = sale.is_returned || (sale.items && sale.items.length > 0 && sale.items.every(item =>
+                                    item.is_returned || (item.returned_quantity || 0) >= item.quantity
+                                ))
                                 const returnedItemsCount = sale.items?.filter(item => item.is_returned).length || 0
                                 const partialReturnedItemsCount = sale.items?.filter(item => (item.returned_quantity || 0) > 0 && !item.is_returned).length || 0
                                 const totalReturnedQuantity = sale.items?.reduce((sum, item) => {
@@ -621,7 +667,7 @@ export function Sales() {
                                         key={sale.id}
                                         className={cn(
                                             "p-4 rounded-[2rem] border border-border shadow-sm space-y-4 transition-all active:scale-[0.98]",
-                                            sale.is_returned ? 'bg-destructive/5 border-destructive/20' : hasAnyReturn ? 'bg-orange-500/5' : 'bg-card'
+                                            isFullyReturned ? 'bg-destructive/5 border-destructive/20' : hasAnyReturn ? 'bg-orange-500/5' : 'bg-card'
                                         )}
                                     >
                                         <div className="flex justify-between items-start">
@@ -642,7 +688,7 @@ export function Sales() {
                                                         )}
                                                     </div>
                                                     <div className="flex flex-wrap gap-1.5">
-                                                        {sale.is_returned && (
+                                                        {isFullyReturned && (
                                                             <span className="px-2 py-0.5 text-[9px] font-bold bg-destructive/10 text-destructive rounded-full border border-destructive/20 uppercase">
                                                                 {t('sales.return.returnedStatus') || 'RETURNED'}
                                                             </span>
@@ -652,7 +698,7 @@ export function Sales() {
                                                                 ⚠️ {t('sales.flagged') || 'FLAGGED'}
                                                             </span>
                                                         )}
-                                                        {hasAnyReturn && !sale.is_returned && (
+                                                        {hasAnyReturn && !isFullyReturned && (
                                                             <span className="px-2 py-0.5 text-[9px] font-bold bg-orange-500/10 text-orange-600 rounded-full border border-orange-500/20 uppercase">
                                                                 -{totalReturnedQuantity} {t('sales.return.returnedLabel') || 'returned'}
                                                             </span>
@@ -668,7 +714,7 @@ export function Sales() {
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-xl font-black text-primary leading-none">
-                                                    {formatCurrency(sale.total_amount, sale.settlement_currency || 'usd', features.iqd_display_preference)}
+                                                    {formatCurrency(getEffectiveTotal(sale), sale.settlement_currency || 'usd', features.iqd_display_preference)}
                                                 </div>
                                                 <div className="text-[10px] font-bold text-primary/40 uppercase tracking-widest mt-1">
                                                     {sale.settlement_currency || 'usd'}
@@ -697,7 +743,7 @@ export function Sales() {
                                                 </Button>
                                             </div>
                                             <div className="flex gap-1">
-                                                {!sale.is_returned && (user?.role === 'admin' || user?.role === 'staff') && (
+                                                {!isFullyReturned && (user?.role === 'admin' || user?.role === 'staff') && (
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
@@ -712,7 +758,7 @@ export function Sales() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/5"
-                                                        onClick={() => handleDeleteSale(sale.id)}
+                                                        onClick={() => handleDeleteSale(sale)}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </Button>
@@ -737,6 +783,9 @@ export function Sales() {
                             </TableHeader>
                             <TableBody>
                                 {sales.map((sale) => {
+                                    const isFullyReturned = sale.is_returned || (sale.items && sale.items.length > 0 && sale.items.every(item =>
+                                        item.is_returned || (item.returned_quantity || 0) >= item.quantity
+                                    ))
                                     const returnedItemsCount = sale.items?.filter(item => item.is_returned).length || 0
                                     const partialReturnedItemsCount = sale.items?.filter(item => (item.returned_quantity || 0) > 0 && !item.is_returned).length || 0
                                     const totalReturnedQuantity = sale.items?.reduce((sum, item) => {
@@ -749,7 +798,7 @@ export function Sales() {
                                     return (
                                         <TableRow
                                             key={sale.id}
-                                            className={sale.is_returned ? 'bg-destructive/10 border-destructive/20' : hasAnyReturn ? 'bg-orange-500/10 border-orange-500/20 dark:bg-orange-500/5 dark:border-orange-500/10' : ''}
+                                            className={isFullyReturned ? 'bg-destructive/10 border-destructive/20' : hasAnyReturn ? 'bg-orange-500/10 border-orange-500/20 dark:bg-orange-500/5 dark:border-orange-500/10' : ''}
                                         >
                                             <TableCell className="font-mono text-sm font-bold text-primary">
                                                 {sale.sequence_id ? (
@@ -764,7 +813,7 @@ export function Sales() {
                                                         {formatDateTime(sale.created_at)}
                                                     </span>
                                                     <div className="flex items-center gap-2">
-                                                        {sale.is_returned && (
+                                                        {isFullyReturned && (
                                                             <span className="px-2 py-0.5 text-[10px] font-bold bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive-foreground rounded-full border border-destructive/30">
                                                                 {(t('sales.return.returnedStatus') || 'RETURNED').toUpperCase()}
                                                             </span>
@@ -774,7 +823,7 @@ export function Sales() {
                                                                 ⚠️ {(t('sales.flagged') || 'FLAGGED').toUpperCase()}
                                                             </span>
                                                         )}
-                                                        {hasAnyReturn && !sale.is_returned && (
+                                                        {hasAnyReturn && !isFullyReturned && (
                                                             <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30">
                                                                 -{totalReturnedQuantity} {t('sales.return.returnedLabel') || 'returned'}
                                                             </div>
@@ -790,8 +839,9 @@ export function Sales() {
                                                     {sale.origin}
                                                 </span>
                                             </TableCell>
+
                                             <TableCell className="text-end font-bold">
-                                                {formatCurrency(sale.total_amount, sale.settlement_currency || 'usd', features.iqd_display_preference)}
+                                                {formatCurrency(getEffectiveTotal(sale), sale.settlement_currency || 'usd', features.iqd_display_preference)}
                                             </TableCell>
                                             <TableCell className="text-end">
                                                 <Button
@@ -826,7 +876,7 @@ export function Sales() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                        onClick={() => handleDeleteSale(sale.id)}
+                                                        onClick={() => handleDeleteSale(sale)}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </Button>
@@ -917,6 +967,19 @@ export function Sales() {
                 isOpen={showPrintModal}
                 onClose={() => setShowPrintModal(false)}
                 onSelect={handlePrintSelection}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false)
+                    setSaleToDelete(null)
+                }}
+                onConfirm={confirmDeleteSale}
+                itemName={saleToDelete ? (saleToDelete.sequence_id ? `#${String(saleToDelete.sequence_id).padStart(5, '0')}` : `#${saleToDelete.id.slice(0, 8)}`) : ''}
+                isLoading={isLoading}
+                title={t('sales.confirmDelete')}
+                description={t('sales.deleteWarning')}
             />
         </div>
     )

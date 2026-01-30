@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     Dialog,
@@ -28,12 +28,10 @@ import {
     PieChart,
     Pie,
     Cell,
-    BarChart,
-    Bar,
     Legend
 } from 'recharts'
 import { formatCurrency, cn } from '@/lib/utils'
-import { DollarSign, TrendingUp, BarChart3, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { DollarSign, TrendingUp, BarChart3, PieChart as PieChartIcon } from 'lucide-react'
 
 export type MetricType = 'grossRevenue' | 'totalCost' | 'netProfit' | 'profitMargin'
 
@@ -65,15 +63,9 @@ const CURRENCY_COLORS: Record<string, string> = {
     try: '#f59e0b', // Amber
 }
 
-const METRIC_COLORS: Record<MetricType, { stroke: string, fill: string, gradient: string }> = {
-    grossRevenue: { stroke: '#3b82f6', fill: '#3b82f6', gradient: 'colorRevenue' },
-    totalCost: { stroke: '#f97316', fill: '#f97316', gradient: 'colorCost' },
-    netProfit: { stroke: '#10b981', fill: '#10b981', gradient: 'colorProfit' },
-    profitMargin: { stroke: '#8b5cf6', fill: '#8b5cf6', gradient: 'colorMargin' }
-}
-
 export function MetricDetailModal({ isOpen, onClose, metricType, currency, iqdPreference, data }: MetricDetailModalProps) {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
+    const isRtl = i18n.dir() === 'rtl'
 
     const activeCurrencies = useMemo(() => data ? Object.keys(data) : [], [data])
 
@@ -207,7 +199,14 @@ export function MetricDetailModal({ isOpen, onClose, metricType, currency, iqdPr
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl p-0 bg-background/95 backdrop-blur-3xl border-border/50 overflow-hidden rounded-[2.5rem] shadow-2xl">
+            <DialogContent className={cn(
+                "max-w-5xl p-0 bg-background/95 backdrop-blur-3xl overflow-hidden rounded-[2.5rem] shadow-2xl transition-all duration-500",
+                "border-[3px]",
+                metricType === 'grossRevenue' && "border-blue-500/50 shadow-blue-500/10",
+                metricType === 'totalCost' && "border-orange-500/50 shadow-orange-500/10",
+                metricType === 'netProfit' && "border-emerald-500/50 shadow-emerald-500/10",
+                metricType === 'profitMargin' && "border-purple-500/50 shadow-purple-500/10"
+            )}>
                 <div className="p-6 md:p-8 space-y-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
                     <DialogHeader className="flex flex-row items-center justify-between space-y-0">
                         <div className="flex items-center gap-4">
@@ -276,6 +275,7 @@ export function MetricDetailModal({ isOpen, onClose, metricType, currency, iqdPr
                                             tick={{ fontSize: 10, fontWeight: 700, fill: 'currentColor' }}
                                             className="text-muted-foreground/60"
                                             dy={10}
+                                            reversed={isRtl}
                                         />
                                         <YAxis
                                             axisLine={false}
@@ -283,6 +283,7 @@ export function MetricDetailModal({ isOpen, onClose, metricType, currency, iqdPr
                                             tick={{ fontSize: 10, fontWeight: 700, fill: 'currentColor' }}
                                             className="text-muted-foreground/60"
                                             tickFormatter={(val) => metricType === 'profitMargin' ? `${val}%` : val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
+                                            orientation={isRtl ? 'right' : 'left'}
                                         />
                                         <Tooltip
                                             contentStyle={{
@@ -290,7 +291,8 @@ export function MetricDetailModal({ isOpen, onClose, metricType, currency, iqdPr
                                                 borderRadius: '20px',
                                                 border: '1px solid hsl(var(--border))',
                                                 boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                                                padding: '12px'
+                                                padding: '12px',
+                                                textAlign: isRtl ? 'right' : 'left'
                                             }}
                                             itemStyle={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 0' }}
                                             labelStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.6 }}
@@ -332,43 +334,46 @@ export function MetricDetailModal({ isOpen, onClose, metricType, currency, iqdPr
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="h-[320px] flex items-center justify-center p-4">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={categoryData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={65}
-                                            outerRadius={85}
-                                            paddingAngle={8}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {categoryData.map((entry, index) => (
-                                                <Cell
-                                                    key={`cell-${index}`}
-                                                    fill={COLORS[index % COLORS.length]}
-                                                    className="hover:opacity-80 transition-opacity cursor-pointer"
-                                                />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'hsl(var(--card))',
-                                                borderRadius: '20px',
-                                                border: '1px solid hsl(var(--border))',
-                                                padding: '12px'
-                                            }}
-                                            formatter={(value: any) => formatCurrency(value, (activeCurrencies[0] || currency) as any, iqdPreference)}
-                                        />
-                                        <Legend
-                                            verticalAlign="bottom"
-                                            align="center"
-                                            iconType="circle"
-                                            wrapperStyle={{ fontSize: '11px', fontWeight: 800, paddingTop: '20px' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                <div dir="ltr" className="w-full h-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={categoryData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={65}
+                                                outerRadius={85}
+                                                paddingAngle={8}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {categoryData.map((_, index) => (
+                                                    <Cell
+                                                        key={`cell-${index}`}
+                                                        fill={COLORS[index % COLORS.length]}
+                                                        className="hover:opacity-80 transition-opacity cursor-pointer"
+                                                    />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'hsl(var(--card))',
+                                                    borderRadius: '20px',
+                                                    border: '1px solid hsl(var(--border))',
+                                                    padding: '12px',
+                                                    textAlign: 'left'
+                                                }}
+                                                formatter={(value: any) => formatCurrency(value, (activeCurrencies[0] || currency) as any, iqdPreference)}
+                                            />
+                                            <Legend
+                                                verticalAlign="bottom"
+                                                align="center"
+                                                iconType="circle"
+                                                wrapperStyle={{ fontSize: '11px', fontWeight: 800, paddingTop: '20px' }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </CardContent>
                         </Card>
 
@@ -386,25 +391,25 @@ export function MetricDetailModal({ isOpen, onClose, metricType, currency, iqdPr
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="hover:bg-transparent border-border/40">
-                                            <TableHead className="pl-8 text-[10px] font-black uppercase tracking-widest">{t('products.name')}</TableHead>
+                                            <TableHead className={cn("text-[10px] font-black uppercase tracking-widest", isRtl ? "text-right pr-8" : "text-left pl-8")}>{t('products.name')}</TableHead>
                                             <TableHead className="text-center text-[10px] font-black uppercase tracking-widest">{t('inventory.quantity')}</TableHead>
                                             <TableHead className="text-right text-[10px] font-black uppercase tracking-widest">{t('revenue.table.revenue')}</TableHead>
                                             <TableHead className="text-right text-[10px] font-black uppercase tracking-widest">{t('revenue.table.cost')}</TableHead>
                                             <TableHead className="text-right text-[10px] font-black uppercase tracking-widest">{t('revenue.table.profit')}</TableHead>
-                                            <TableHead className="text-right pr-8 text-[10px] font-black uppercase tracking-widest">{t('revenue.table.margin')}</TableHead>
+                                            <TableHead className={cn("text-right text-[10px] font-black uppercase tracking-widest", isRtl ? "pl-8" : "pr-8")}>{t('revenue.table.margin')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {topProducts.map((p, idx) => (
+                                        {topProducts.map((p) => (
                                             <TableRow key={p.id} className="hover:bg-primary/5 transition-colors border-border/40 group">
-                                                <TableCell className="font-bold pl-8 py-4 group-hover:text-primary transition-colors">{p.name}</TableCell>
+                                                <TableCell className={cn("font-bold py-4 group-hover:text-primary transition-colors", isRtl ? "text-right pr-8" : "text-left pl-8")}>{p.name}</TableCell>
                                                 <TableCell className="text-center font-black tabular-nums">{p.quantity}</TableCell>
                                                 <TableCell className="text-right tabular-nums font-semibold">{formatCurrency(p.revenue, (activeCurrencies[0] || currency) as any, iqdPreference)}</TableCell>
                                                 <TableCell className="text-right tabular-nums text-muted-foreground font-medium">{formatCurrency(p.cost, (activeCurrencies[0] || currency) as any, iqdPreference)}</TableCell>
                                                 <TableCell className="text-right tabular-nums font-black text-emerald-600 dark:text-emerald-400">
                                                     {formatCurrency(p.profit, (activeCurrencies[0] || currency) as any, iqdPreference)}
                                                 </TableCell>
-                                                <TableCell className="text-right pr-8">
+                                                <TableCell className={cn("text-right", isRtl ? "pl-8" : "pr-8")}>
                                                     <span className={cn(
                                                         "px-3 py-1 rounded-xl text-[11px] font-black shadow-sm",
                                                         p.margin > 20 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" :

@@ -25,7 +25,8 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue
+    SelectValue,
+    DeleteConfirmationModal
 } from '@/ui/components'
 import { Plus, Pencil, Trash2, ShoppingCart, Search, Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -54,6 +55,8 @@ export function Orders() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingOrder, setEditingOrder] = useState<Order | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [orderToDelete, setOrderToDelete] = useState<Order | null>(null)
     const workspaceId = user?.workspaceId || ''
 
     // Form state
@@ -168,9 +171,22 @@ export function Orders() {
         }
     }
 
-    const handleDelete = async (id: string) => {
-        if (confirm(t('orders.messages.deleteConfirm') || 'Are you sure you want to delete this order?')) {
-            await deleteOrder(id)
+    const handleDelete = (order: Order) => {
+        setOrderToDelete(order)
+        setDeleteModalOpen(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!orderToDelete) return
+        setIsLoading(true)
+        try {
+            await deleteOrder(orderToDelete.id)
+            setDeleteModalOpen(false)
+            setOrderToDelete(null)
+        } catch (error) {
+            console.error('Error deleting order:', error)
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -256,7 +272,7 @@ export function Orders() {
                                                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(order)}>
                                                         <Pencil className="w-4 h-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(order.id)}>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(order)}>
                                                         <Trash2 className="w-4 h-4 text-destructive" />
                                                     </Button>
                                                 </div>
@@ -436,6 +452,16 @@ export function Orders() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                itemName={orderToDelete?.orderNumber}
+                isLoading={isLoading}
+                title={t('orders.confirmDelete')}
+                description={t('orders.deleteWarning')}
+            />
         </div>
     )
 }

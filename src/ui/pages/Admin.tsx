@@ -22,10 +22,12 @@ import {
     TabsTrigger,
     TabsContent,
     Switch,
-    useToast
+    useToast,
+    DeleteConfirmationModal
 } from '@/ui/components'
 import { supabase, isSupabaseConfigured } from '@/auth/supabase'
 import { useLocation } from 'wouter'
+import { useTranslation } from 'react-i18next'
 
 const SESSION_DURATION = 60 // seconds
 
@@ -55,6 +57,7 @@ interface AdminWorkspace {
 export function Admin() {
     const [,] = useLocation()
     const { toast } = useToast()
+    const { t } = useTranslation()
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [passkey, setPasskey] = useState('')
     const [error, setError] = useState('')
@@ -68,6 +71,8 @@ export function Admin() {
     const [isLoading, setIsLoading] = useState(false)
     const [activeTab, setActiveTab] = useState('users')
     const [showDeleted, setShowDeleted] = useState(false)
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null)
 
     // Handle session timeout
     useEffect(() => {
@@ -150,22 +155,27 @@ export function Admin() {
         }
     }
 
-    const handleDeleteUser = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this user account? This cannot be undone.')) return
+    const handleDeleteUser = (user: AdminUser) => {
+        setUserToDelete(user)
+        setDeleteModalOpen(true)
+    }
 
+    const confirmDeleteUser = async () => {
+        if (!userToDelete) return
+        setIsLoading(true)
         try {
-            const { error } = await supabase.rpc('delete_user_account', { target_user_id: id })
+            const { error } = await supabase.rpc('delete_user_account', { target_user_id: userToDelete.id })
             if (error) throw error
 
-            setUsers(users.filter(u => u.id !== id))
-            // Refresh logic might be needed if workspace deletion happened implicitly
-            // But let's assume user wants to see immediate update. 
-            // Ideally we re-fetch to see deleted workspace status update
+            setUsers(users.filter(u => u.id !== userToDelete.id))
             fetchData()
-
+            setDeleteModalOpen(false)
+            setUserToDelete(null)
             toast({ title: "User deleted successfully" })
         } catch (err: any) {
             alert('Failed to delete user: ' + err.message)
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -377,7 +387,7 @@ export function Admin() {
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <button
-                                                        onClick={() => handleDeleteUser(user.id)}
+                                                        onClick={() => handleDeleteUser(user)}
                                                         className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                                         title="Delete User"
                                                     >
@@ -526,6 +536,16 @@ export function Admin() {
                     </TabsContent>
                 </Tabs>
             </div>
+
+            <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDeleteUser}
+                itemName={userToDelete?.name}
+                isLoading={isLoading}
+                title={t('auth.confirmDeleteUser')}
+                description={t('auth.deleteUserWarning')}
+            />
         </div>
     )
 }
