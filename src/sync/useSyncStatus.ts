@@ -6,7 +6,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { fullSync, type SyncState } from './syncEngine'
 import { isSupabaseConfigured } from '@/auth/supabase'
 
-const LAST_SYNC_KEY = 'erp_last_sync_time'
+const LAST_SYNC_KEY = 'asaas_last_sync_time'
 
 export interface UseSyncStatusResult {
     syncState: SyncState

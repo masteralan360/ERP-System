@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Asaas",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "identifier": "com.asaas.app",
   "build": {
     "frontendDist": "../dist",
@@ -54,7 +54,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/masteralan360/ERP-System/releases/latest/download/latest.json"
+        "https://github.com/masteralan360/Asaas/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

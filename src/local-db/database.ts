@@ -1,8 +1,8 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Product, Category, Customer, Order, Invoice, User, SyncQueueItem, Sale, SaleItem, OfflineMutation, Workspace, AppSetting } from './models'
 
-// ERP Database using Dexie.js for IndexedDB
-export class ERPDatabase extends Dexie {
+// Asaas Database using Dexie.js for IndexedDB
+export class AsaasDatabase extends Dexie {
     products!: EntityTable<Product, 'id'>
     categories!: EntityTable<Category, 'id'>
     customers!: EntityTable<Customer, 'id'>
@@ -17,7 +17,7 @@ export class ERPDatabase extends Dexie {
     app_settings!: EntityTable<AppSetting, 'key'>
 
     constructor() {
-        super('ERPDatabase')
+        super('AsaasDatabase')
 
         this.version(10).stores({
             products: 'id, sku, name, categoryId, workspaceId, currency, syncStatus, updatedAt, isDeleted, canBeReturned',
@@ -37,7 +37,7 @@ export class ERPDatabase extends Dexie {
 }
 
 // Singleton database instance
-export const db = new ERPDatabase()
+export const db = new AsaasDatabase()
 
 // Database utility functions
 export async function clearDatabase(): Promise<void> {

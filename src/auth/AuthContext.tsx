@@ -44,7 +44,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 // Demo user for offline/non-configured mode
 const DEMO_USER: AuthUser = {
     id: 'demo-user',
-    email: 'demo@erp-system.local',
+    email: 'demo@asaas.local',
     name: 'Demo User',
     role: 'admin',
     workspaceId: 'demo-workspace',
@@ -281,7 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSession(null)
 
             // 4. Clear workspace cache
-            localStorage.removeItem('erp_workspace_cache')
+            localStorage.removeItem('asaas_workspace_cache')
 
             console.log('[Auth] Sign out complete')
         }

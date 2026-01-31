@@ -1,6 +1,6 @@
-# Asaas - Offline-First ERP System
+# Asaas - Offline-First Enterprise Resource Planning
 
-A modern, offline-first ERP web application built with React, Vite, and Supabase.
+A modern, offline-first enterprise resource planning web application built with React, Vite, and Supabase.
 
 ## Features
 

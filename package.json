@@ -1,12 +1,12 @@
 {
   "name": "asaas",
   "private": true,
-  "version": "1.5.7",
+  "version": "1.5.8",
   "main": "electron/main.cjs",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/masteralan360/ERP-System.git"
+    "url": "https://github.com/masteralan360/Asaas.git"
   },
   "build": {
     "appId": "com.asaas.app",
@@ -25,7 +25,7 @@
     "publish": {
       "provider": "github",
       "owner": "masteralan360",
-      "repo": "ERP-System",
+      "repo": "Asaas",
       "releaseType": "release"
     }
   },

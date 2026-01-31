@@ -13,7 +13,7 @@ export default defineConfig({
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
             manifest: {
                 name: 'Asaas',
-                short_name: 'ERP',
+                short_name: 'Asaas',
                 description: 'Offline-first Enterprise Resource Planning System',
                 theme_color: '#0f172a',
                 background_color: '#0f172a',

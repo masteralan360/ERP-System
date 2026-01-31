@@ -57,7 +57,7 @@ const defaultFeatures: WorkspaceFeatures = {
     allow_whatsapp: false
 }
 
-const WORKSPACE_CACHE_KEY = 'erp_workspace_cache'
+const WORKSPACE_CACHE_KEY = 'asaas_workspace_cache'
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined)
 
